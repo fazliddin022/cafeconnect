@@ -1,6 +1,13 @@
 import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/common/Navbar'
 import Footer from './components/common/Footer'
+import HomePage from './pages/HomePage'
+import MenuPage from './pages/MenuPage'
+import ReservationPage from './pages/ReservationPage'
+import GalleryPage from './pages/GalleryPage'
+import EventsPage from './pages/EventsPage'
+import ContactPage from './pages/ContactPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 function AppRouter() {
   return (
@@ -8,13 +15,13 @@ function AppRouter() {
       <Navbar />
       <main className="flex-grow">
         <Routes>
-          <Route path="/" element={<div className="p-8 text-2xl">🏠 Home Page</div>} />
-          <Route path="/menu" element={<div className="p-8 text-2xl">🍽️ Menu Page</div>} />
-          <Route path="/reservation" element={<div className="p-8 text-2xl">📅 Reservation Page</div>} />
-          <Route path="/gallery" element={<div className="p-8 text-2xl">🖼️ Gallery Page</div>} />
-          <Route path="/events" element={<div className="p-8 text-2xl">🎵 Events Page</div>} />
-          <Route path="/contact" element={<div className="p-8 text-2xl">📞 Contact Page</div>} />
-          <Route path="*" element={<div className="p-8 text-2xl">404 - Not Found</div>} />
+          <Route path="/"            element={<HomePage />} />
+          <Route path="/menu"        element={<MenuPage />} />
+          <Route path="/reservation" element={<ReservationPage />} />
+          <Route path="/gallery"     element={<GalleryPage />} />
+          <Route path="/events"      element={<EventsPage />} />
+          <Route path="/contact"     element={<ContactPage />} />
+          <Route path="*"            element={<NotFoundPage />} />
         </Routes>
       </main>
       <Footer />

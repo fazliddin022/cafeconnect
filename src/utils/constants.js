@@ -13,3 +13,12 @@ export const OPENING_HOURS = [
   { day: 'Saturday',        hours: '09:00 – 23:00' },
   { day: 'Sunday',          hours: '10:00 – 21:00' },
 ]
+
+// Menu categories
+export const MENU_CATEGORIES = [
+  { id: 'all',      label: 'All' },
+  { id: 'coffee',   label: '☕ Coffee' },
+  { id: 'desserts', label: '🍰 Desserts' },
+  { id: 'snacks',   label: '🥐 Snacks' },
+  { id: 'drinks',   label: '🥤 Drinks' },
+]

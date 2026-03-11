@@ -13,14 +13,17 @@
     "test:coverage": "jest --coverage"
   },
   "jest": {
-  "testEnvironment": "jsdom",
-  "moduleNameMapper": {
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy"
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "@testing-library/jest-dom"
+    ],
+    "moduleNameMapper": {
+      "\\.(css|less|scss|sass)$": "identity-obj-proxy"
+    },
+    "transform": {
+      "^.+\\.(js|jsx)$": "babel-jest"
+    }
   },
-  "transform": {
-    "^.+\\.(js|jsx)$": "babel-jest"
-  }
-},
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "react": "^19.2.0",

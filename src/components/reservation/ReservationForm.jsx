@@ -2,10 +2,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { reservationSchema } from '../../utils/validators'
 import { useReservationContext } from '../../context/ReservationContext'
+import { submitReservation } from '../../services/reservationService'
 import { useState } from 'react'
 
 export default function ReservationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState(null)
   const { confirmReservation } = useReservationContext()
 
   const {
@@ -20,11 +22,14 @@ export default function ReservationForm() {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true)
+    setError(null)
     try {
-      // TODO: Firebase integration later
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      await submitReservation(data)
       confirmReservation(data)
       reset()
+    } catch (err) {
+      console.error(err)
+      setError('Something went wrong. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -129,7 +134,8 @@ export default function ReservationForm() {
         {errors.notes && <p className="error-msg">{errors.notes.message}</p>}
       </div>
 
-      {/* Submit */}
+      {error && <p className="error-msg text-center">{error}</p>}
+
       <button
         type="submit"
         disabled={isSubmitting}

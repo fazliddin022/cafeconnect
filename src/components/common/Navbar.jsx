@@ -1,86 +1,148 @@
 import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { NAV_LINKS } from '../../utils/constants'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { logoutAdmin } from '../../services/authService'
+
+const NAV_LINKS = [
+  { label: 'Home', path: '/' },
+  { label: 'Menu', path: '/menu' },
+  { label: 'Events', path: '/events' },
+  { label: 'Gallery', path: '/gallery' },
+  { label: 'Contact', path: '/contact' },
+]
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logoutAdmin()
+    navigate('/')
+  }
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
-
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl">☕</span>
-            <span className="text-xl font-bold text-[#c97830]" style={{ fontFamily: 'Playfair Display, serif' }}>
-              CaféConnect
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ label, path }) => (
-              <NavLink
-                key={path}
-                to={path}
-                end={path === '/'}
-                className={({ isActive }) =>
-                  `px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-[#fdf6ee] text-[#c97830]'
-                      : 'text-gray-600 hover:text-[#c97830] hover:bg-[#fdf6ee]'
-                  }`
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-            <Link to="/reservation" className="ml-3 btn-primary text-sm">
-              Reserve a Table
-            </Link>
-          </nav>
-
-          {/* Mobile Hamburger */}
-          <button
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
+    <nav className="sticky top-0 z-50 bg-white shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <span className="text-2xl">☕</span>
+          <span
+            className="text-xl font-bold text-[#c97830]"
+            style={{ fontFamily: 'Playfair Display, serif' }}
           >
-            <div className="w-6 h-0.5 bg-current mb-1.5" />
-            <div className="w-6 h-0.5 bg-current mb-1.5" />
-            <div className="w-6 h-0.5 bg-current" />
-          </button>
-        </div>
-      </div>
+            CaféConnect
+          </span>
+        </Link>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-1">
-          {NAV_LINKS.map(({ label, path }) => (
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-8">
+          {NAV_LINKS.map((link) => (
             <NavLink
-              key={path}
-              to={path}
-              end={path === '/'}
-              onClick={() => setIsOpen(false)}
+              key={link.path}
+              to={link.path}
+              end={link.path === '/'}
               className={({ isActive }) =>
-                `block px-4 py-2.5 rounded-lg text-sm font-medium ${
-                  isActive ? 'bg-[#fdf6ee] text-[#c97830]' : 'text-gray-600'
-                }`
+                isActive
+                  ? 'text-[#c97830] font-medium'
+                  : 'text-gray-600 hover:text-[#c97830] transition-colors'
               }
             >
-              {label}
+              {link.label}
             </NavLink>
           ))}
-          <Link
-            to="/reservation"
-            onClick={() => setIsOpen(false)}
-            className="block btn-primary text-sm text-center mt-3"
-          >
-            Reserve a Table
-          </Link>
+        </div>
+
+        {/* Auth buttons */}
+        <div className="hidden md:flex items-center gap-3">
+          {user ? (
+            <>
+              <span className="text-sm text-gray-500">
+                Hi, {user.displayName || user.email.split('@')[0]}
+              </span>
+              <Link to="/reservation" className="btn-primary text-sm px-4 py-2">
+                Reserve a Table
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="btn-outline text-sm px-4 py-2"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn-outline text-sm px-4 py-2">
+                Sign In
+              </Link>
+              <Link to="/reservation" className="btn-primary text-sm px-4 py-2">
+                Reserve a Table
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden text-gray-600"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? '✕' : '☰'}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="md:hidden bg-white border-t px-6 py-4 space-y-3">
+          {NAV_LINKS.map((link) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              end={link.path === '/'}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                `block ${isActive ? 'text-[#c97830] font-medium' : 'text-gray-600'}`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+          {user ? (
+            <>
+              <Link
+                to="/reservation"
+                onClick={() => setIsOpen(false)}
+                className="block btn-primary text-center"
+              >
+                Reserve a Table
+              </Link>
+              <button
+                onClick={() => { handleLogout(); setIsOpen(false) }}
+                className="block w-full btn-outline text-center"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={() => setIsOpen(false)}
+                className="block btn-outline text-center"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/reservation"
+                onClick={() => setIsOpen(false)}
+                className="block btn-primary text-center"
+              >
+                Reserve a Table
+              </Link>
+            </>
+          )}
         </div>
       )}
-    </header>
+    </nav>
   )
 }

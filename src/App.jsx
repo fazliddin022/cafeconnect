@@ -1,18 +1,19 @@
 import { BrowserRouter } from 'react-router-dom'
-import AppRouter from './router'
 import { MenuProvider } from './context/MenuContext'
 import { ReservationProvider } from './context/ReservationContext'
+import { AuthProvider } from './context/AuthContext'
+import AppRouter from './router'
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
-      <MenuProvider>
-        <ReservationProvider>
-          <AppRouter />
-        </ReservationProvider>
-      </MenuProvider>
+      <AuthProvider>
+        <MenuProvider>
+          <ReservationProvider>
+            <AppRouter />
+          </ReservationProvider>
+        </MenuProvider>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
-
-export default App

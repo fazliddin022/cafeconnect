@@ -1,4 +1,4 @@
-import { ref, push, set, get } from 'firebase/database'
+import { ref, push, set, get, update } from 'firebase/database'
 import { db } from './firebase'
 
 export async function submitReservation(data) {
@@ -16,4 +16,28 @@ export async function fetchReservations() {
   if (!snapshot.exists()) return []
   const data = snapshot.val()
   return Object.entries(data).map(([id, item]) => ({ id, ...item }))
+}
+
+// Faqat shu userning reservationlari — email bo'yicha filter
+export async function fetchMyReservations(email) {
+  const all = await fetchReservations()
+  return all.filter((r) => r.email === email)
+}
+
+// Reservationni bekor qilish
+export async function cancelReservation(id) {
+  await update(ref(db, `reservations/${id}`), {
+    status: 'cancelled',
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+// Reservationni qayta belgilash
+export async function rescheduleReservation(id, newDate, newTime) {
+  await update(ref(db, `reservations/${id}`), {
+    date: newDate,
+    time: newTime,
+    status: 'rescheduled',
+    updatedAt: new Date().toISOString(),
+  })
 }

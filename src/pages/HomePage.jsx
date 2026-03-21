@@ -1,12 +1,23 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { OPENING_HOURS } from '../utils/constants'
 import { menuData } from '../data/menuData'
 import { eventsData } from '../data/eventsData'
-import { formatPrice, formatDate } from '../utils/formatters'
+import { formatPrice } from '../utils/formatters'
+import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
+  const { user, openAuthModal } = useAuth()
+  const navigate = useNavigate()
   const featuredMenu = menuData.filter((item) => item.isPopular).slice(0, 3)
   const upcomingEvents = eventsData.filter((e) => e.isFeatured).slice(0, 2)
+
+  const handleReserveClick = () => {
+    if (user) {
+      navigate('/reservation')
+    } else {
+      openAuthModal()
+    }
+  }
 
   return (
     <div>
@@ -32,13 +43,13 @@ export default function HomePage() {
             <Link to="/menu" className="btn-primary text-base">
               Explore Menu
             </Link>
-            <Link
-              to="/reservation"
+            <button
+              onClick={handleReserveClick}
               className="btn-outline text-base"
               style={{ borderColor: 'white', color: 'white' }}
             >
               Reserve a Table
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -57,12 +68,12 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <Link
-            to="/reservation"
+          <button
+            onClick={handleReserveClick}
             className="px-6 py-3 border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 transition-colors"
           >
             Book Now →
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -163,9 +174,9 @@ export default function HomePage() {
           <p className="text-gray-400 mb-8">
             Reserve your table today and let us take care of the rest.
           </p>
-          <Link to="/reservation" className="btn-primary text-base">
+          <button onClick={handleReserveClick} className="btn-primary text-base">
             Make a Reservation
-          </Link>
+          </button>
         </div>
       </section>
     </div>

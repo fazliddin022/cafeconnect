@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import AdminPage from './pages/AdminPage'
+import MyReservationsPage from './pages/MyReservationsPage'
 
 function PublicLayout({ children }) {
   const { user } = useAuth()
@@ -64,6 +65,12 @@ export default function AppRouter() {
       <Route path="/reservation" element={
         <ProtectedRoute>
           <PublicLayout><ReservationPage /></PublicLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-reservations" element={
+        <ProtectedRoute>
+          <PublicLayout><MyReservationsPage /></PublicLayout>
         </ProtectedRoute>
       } />
 

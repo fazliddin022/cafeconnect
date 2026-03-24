@@ -41,3 +41,32 @@ export async function rescheduleReservation(id, newDate, newTime) {
     updatedAt: new Date().toISOString(),
   })
 }
+
+// Admin uchun — reservation statusini o'zgartirish
+export async function updateReservationStatus(id, status) {
+  await update(ref(db, `reservations/${id}`), {
+    status,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+// O'tib ketgan reservationlarni completed ga o'tkazish
+export async function autoCompleteReservations() {
+  const all = await fetchReservations()
+  const now = new Date()
+
+  const promises = all
+    .filter((r) => {
+      if (r.status === 'cancelled' || r.status === 'completed') return false
+      const reservationTime = new Date(`${r.date}T${r.time}`)
+      return reservationTime < now
+    })
+    .map((r) =>
+      update(ref(db, `reservations/${r.id}`), {
+        status: 'completed',
+        updatedAt: new Date().toISOString(),
+      })
+    )
+
+  await Promise.all(promises)
+}

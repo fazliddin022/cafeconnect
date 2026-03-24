@@ -5,6 +5,7 @@ import {
   fetchMyReservations,
   cancelReservation,
   rescheduleReservation,
+  autoCompleteReservations,
 } from '../services/reservationService'
 
 const STATUS_STYLES = {
@@ -47,19 +48,20 @@ export default function MyReservationsPage() {
   }, [user])
 
   const loadReservations = async () => {
-    setLoading(true)
-    try {
-      const data = await fetchMyReservations(user.email)
-      const sorted = data.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      )
-      setReservations(sorted)
-    } catch (err) {
-      setError('Failed to load reservations.')
-    } finally {
-      setLoading(false)
-    }
+  setLoading(true)
+  try {
+    await autoCompleteReservations()
+    const data = await fetchMyReservations(user.email)
+    const sorted = data.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    )
+    setReservations(sorted)
+  } catch (err) {
+    setError('Failed to load reservations.')
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleCancel = (id, date, time) => {
     if (isWithin30Minutes(date, time)) return
@@ -79,27 +81,35 @@ export default function MyReservationsPage() {
     }
   }
 
-  const handleReschedule = async () => {
-    if (!newDate || !newTime) return
-    setRescheduling(true)
-    try {
-      await rescheduleReservation(rescheduleId, newDate, newTime)
-      setReservations((prev) =>
-        prev.map((r) =>
-          r.id === rescheduleId
-            ? { ...r, date: newDate, time: newTime, status: 'rescheduled' }
-            : r
-        )
-      )
-      setRescheduleId(null)
-      setNewDate('')
-      setNewTime('')
-    } catch (err) {
-      alert('Failed to reschedule. Please try again.')
-    } finally {
-      setRescheduling(false)
-    }
+const handleReschedule = async () => {
+  if (!newDate || !newTime) return
+
+  const selectedDateTime = new Date(`${newDate}T${newTime}`)
+  const now = new Date()
+  if (selectedDateTime <= now) {
+    alert('Please select a future date and time.')
+    return
   }
+
+  setRescheduling(true)
+  try {
+    await rescheduleReservation(rescheduleId, newDate, newTime)
+    setReservations((prev) =>
+      prev.map((r) =>
+        r.id === rescheduleId
+          ? { ...r, date: newDate, time: newTime, status: 'rescheduled' }
+          : r
+      )
+    )
+    setRescheduleId(null)
+    setNewDate('')
+    setNewTime('')
+  } catch (err) {
+    alert('Failed to reschedule. Please try again.')
+  } finally {
+    setRescheduling(false)
+  }
+}
 
   const today = new Date().toISOString().split('T')[0]
 

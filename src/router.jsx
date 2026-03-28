@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation} from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Navbar from './components/common/Navbar'
 import Footer from './components/common/Footer'
@@ -13,12 +13,12 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import AdminPage from './pages/AdminPage'
 import MyReservationsPage from './pages/MyReservationsPage'
+import StaffPage from './pages/StaffPage'
 
 function PublicLayout({ children }) {
-  const { user } = useAuth()
-  if (user?.email === 'admin@cafeconnect.com') {
-    return <Navigate to="/admin" replace />
-  }
+  const { role } = useAuth()
+  if (role === 'admin') return <Navigate to="/admin" replace />
+  if (role === 'staff') return <Navigate to="/staff" replace />
   return (
     <>
       <Navbar />
@@ -29,18 +29,25 @@ function PublicLayout({ children }) {
 }
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuth()
+  const { user, role } = useAuth()
   const location = useLocation()
-  
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
-  if (user.email === 'admin@cafeconnect.com') return <Navigate to="/admin" replace />
+  if (role === 'admin') return <Navigate to="/admin" replace />
+  if (role === 'staff') return <Navigate to="/staff" replace />
   return children
 }
 
 function AdminRoute({ children }) {
-  const { user } = useAuth()
-  if (!user) return <Navigate to="/login" />
-  if (user.email !== 'admin@cafeconnect.com') return <Navigate to="/" />
+  const { user, role } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (role !== 'admin') return <Navigate to="/" replace />
+  return children
+}
+
+function StaffRoute({ children }) {
+  const { user, role } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (role !== 'staff') return <Navigate to="/" replace />
   return children
 }
 
@@ -53,6 +60,9 @@ export default function AppRouter() {
 
       {/* Admin route */}
       <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+
+      {/* Staff route */}
+      <Route path="/staff" element={<StaffRoute><StaffPage /></StaffRoute>} />
 
       {/* Public routes */}
       <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />

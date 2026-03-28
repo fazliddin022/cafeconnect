@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../services/firebase'
+import { getUserRole } from '../services/authService'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -18,9 +19,13 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      if (email === 'admin@cafeconnect.com') {
+      const result = await signInWithEmailAndPassword(auth, email, password)
+      const role = await getUserRole(result.user.uid)
+
+      if (role === 'admin') {
         navigate('/admin', { replace: true })
+      } else if (role === 'staff') {
+        navigate('/staff', { replace: true })
       } else {
         navigate(from, { replace: true })
       }

@@ -5,6 +5,7 @@ import { logoutAdmin } from '../services/authService'
 import { fetchReservations, updateReservationStatus, rescheduleReservation, autoCompleteReservations } from '../services/reservationService'
 import { ref, get } from 'firebase/database'
 import { db } from '../services/firebase'
+import RescheduleModal from '../components/reservation/RescheduleModal'
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -24,12 +25,8 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('reservations')
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState(null)
-
-  // Reschedule modal state
-  const [rescheduleId, setRescheduleId] = useState(null)
-  const [newDate, setNewDate] = useState('')
-  const [newTime, setNewTime] = useState('')
-  const [rescheduling, setRescheduling] = useState(false)
+  const [rescheduleTarget, setRescheduleTarget] = useState(null)
+  const [confirmCancel, setConfirmCancel] = useState(null)
 
   useEffect(() => {
     if (!user) {
@@ -44,28 +41,28 @@ export default function AdminPage() {
   }, [user])
 
   const loadData = async () => {
-  setLoading(true)
-  try {
-    await autoCompleteReservations()
-    const reservationsData = await fetchReservations()
-    const sorted = reservationsData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    setReservations(sorted)
+    setLoading(true)
+    try {
+      await autoCompleteReservations()
+      const reservationsData = await fetchReservations()
+      const sorted = reservationsData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      setReservations(sorted)
 
-    const contactsSnap = await get(ref(db, 'contacts'))
-    if (contactsSnap.exists()) {
-      const data = contactsSnap.val()
-      setContacts(
-        Object.entries(data)
-          .map(([id, item]) => ({ id, ...item }))
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      )
+      const contactsSnap = await get(ref(db, 'contacts'))
+      if (contactsSnap.exists()) {
+        const data = contactsSnap.val()
+        setContacts(
+          Object.entries(data)
+            .map(([id, item]) => ({ id, ...item }))
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        )
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-  } catch (err) {
-    console.error(err)
-  } finally {
-    setLoading(false)
   }
-}
 
   const handleStatusChange = async (id, newStatus) => {
     setUpdatingId(id)
@@ -79,35 +76,34 @@ export default function AdminPage() {
     }
   }
 
-const handleReschedule = async () => {
-  if (!newDate || !newTime) return
-
-  const selectedDateTime = new Date(`${newDate}T${newTime}`)
-  const now = new Date()
-  if (selectedDateTime <= now) {
-    alert('Please select a future date and time.')
-    return
-  }
-
-  setRescheduling(true)
-  try {
-    await rescheduleReservation(rescheduleId, newDate, newTime)
+  const handleRescheduleConfirm = async (newDate, newTime) => {
+    await rescheduleReservation(rescheduleTarget.id, newDate, newTime)
     setReservations((prev) =>
       prev.map((r) =>
-        r.id === rescheduleId
+        r.id === rescheduleTarget.id
           ? { ...r, date: newDate, time: newTime, status: 'rescheduled' }
           : r
       )
     )
-    setRescheduleId(null)
-    setNewDate('')
-    setNewTime('')
-  } catch (err) {
-    alert('Failed to reschedule.')
-  } finally {
-    setRescheduling(false)
+    setRescheduleTarget(null)
   }
-}
+
+  const handleCancelReservation = (id, date, time) => {
+    setConfirmCancel({ id, date, time })
+  }
+
+  const confirmCancelAction = async () => {
+    const { id } = confirmCancel
+    setConfirmCancel(null)
+    try {
+      await updateReservationStatus(id, 'cancelled')
+      setReservations((prev) =>
+        prev.map((r) => r.id === id ? { ...r, status: 'cancelled' } : r)
+      )
+    } catch (err) {
+      alert('Failed to cancel.')
+    }
+  }
 
   const handleLogout = async () => {
     await logoutAdmin()
@@ -200,25 +196,29 @@ const handleReschedule = async () => {
                             className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c97830] ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}
                           >
                             {STATUS_OPTIONS.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
+                              <option key={s} value={s}>{s}</option>
                             ))}
                           </select>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         {r.status !== 'cancelled' && r.status !== 'completed' && (
-                          <button
-                            onClick={() => {
-                              setRescheduleId(r.id)
-                              setNewDate(r.date)
-                              setNewTime(r.time)
-                            }}
-                            className="px-3 py-1 rounded-lg border border-[#c97830] text-[#c97830] text-xs font-medium hover:bg-[#fdf0d5] transition-colors"
-                          >
-                            Reschedule
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setRescheduleTarget(r)}
+                              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[#c97830] hover:text-[#c97830] transition-colors"
+                              title="Reschedule"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleCancelReservation(r.id, r.date, r.time)}
+                              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-400 transition-colors"
+                              title="Cancel"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -266,53 +266,40 @@ const handleReschedule = async () => {
       </div>
 
       {/* Reschedule Modal */}
-      {rescheduleId && (
+      {rescheduleTarget && (
+        <RescheduleModal
+          reservation={rescheduleTarget}
+          onConfirm={handleRescheduleConfirm}
+          onClose={() => setRescheduleTarget(null)}
+        />
+      )}
+
+      {/* Cancel Confirm Modal */}
+      {confirmCancel && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-xl">
+            <p className="text-4xl mb-4">🗑️</p>
             <h2
-              className="text-xl font-bold text-gray-900 mb-6"
+              className="text-xl font-bold text-gray-900 mb-2"
               style={{ fontFamily: 'Playfair Display, serif' }}
             >
-              Reschedule Reservation
+              Cancel Reservation?
             </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Date
-                </label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Time
-                </label>
-                <input
-                  type="time"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setRescheduleId(null)}
-                className="flex-1 btn-outline"
-              >
-                Cancel
+            <p className="text-gray-500 text-sm mb-6">
+              Are you sure you want to cancel reservation for{' '}
+              <span className="font-medium text-gray-700">
+                {confirmCancel.date} at {confirmCancel.time}
+              </span>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmCancel(null)} className="flex-1 btn-outline">
+                Keep it
               </button>
               <button
-                onClick={handleReschedule}
-                disabled={rescheduling || !newDate || !newTime}
-                className="flex-1 btn-primary disabled:opacity-60"
+                onClick={confirmCancelAction}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
               >
-                {rescheduling ? 'Saving...' : 'Confirm'}
+                Yes, Cancel
               </button>
             </div>
           </div>

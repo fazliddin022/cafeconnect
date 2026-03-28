@@ -1,24 +1,58 @@
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { reservationSchema } from '../../utils/validators'
 import { useReservationContext } from '../../context/ReservationContext'
-import { submitReservation } from '../../services/reservationService'
-import { useState } from 'react'
+import { submitReservation, fetchReservations } from '../../services/reservationService'
+import { useState, useEffect } from 'react'
+
+// Café ning ish vaqtlari bo'yicha time slots
+const TIME_SLOTS = [
+  '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00',
+  '18:00', '19:00', '20:00', '21:00',
+]
 
 export default function ReservationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [bookedTimes, setBookedTimes] = useState([])
+  const [selectedDate, setSelectedDate] = useState('')
   const { confirmReservation } = useReservationContext()
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(reservationSchema),
     defaultValues: { guests: 2 },
   })
+
+  const watchedDate = watch('date')
+
+  // Sana o'zgarganda band vaqtlarni yuklaymiz
+  useEffect(() => {
+    if (!watchedDate) return
+    setSelectedDate(watchedDate)
+    loadBookedTimes(watchedDate)
+    setValue('time', '') // Vaqtni reset qilamiz
+  }, [watchedDate])
+
+  const loadBookedTimes = async (date) => {
+    try {
+      const all = await fetchReservations()
+      const booked = all
+        .filter((r) => r.date === date && r.status !== 'cancelled')
+        .map((r) => r.time)
+      setBookedTimes(booked)
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   const onSubmit = async (data) => {
     setIsSubmitting(true)
@@ -27,6 +61,8 @@ export default function ReservationForm() {
       await submitReservation(data)
       confirmReservation(data)
       reset()
+      setBookedTimes([])
+      setSelectedDate('')
     } catch (err) {
       console.error(err)
       setError('Something went wrong. Please try again.')
@@ -55,9 +91,7 @@ export default function ReservationForm() {
       {/* Email + Phone */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input
             {...register('email')}
             type="email"
@@ -67,9 +101,7 @@ export default function ReservationForm() {
           {errors.email && <p className="error-msg">{errors.email.message}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phone
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
           <input
             {...register('phone')}
             type="tel"
@@ -80,12 +112,10 @@ export default function ReservationForm() {
         </div>
       </div>
 
-      {/* Date + Time + Guests */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Date + Guests */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Date
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
           <input
             {...register('date')}
             type="date"
@@ -95,20 +125,7 @@ export default function ReservationForm() {
           {errors.date && <p className="error-msg">{errors.date.message}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Time
-          </label>
-          <input
-            {...register('time')}
-            type="time"
-            className="input-field"
-          />
-          {errors.time && <p className="error-msg">{errors.time.message}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Guests
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
           <input
             {...register('guests', { valueAsNumber: true })}
             type="number"
@@ -118,6 +135,45 @@ export default function ReservationForm() {
           />
           {errors.guests && <p className="error-msg">{errors.guests.message}</p>}
         </div>
+      </div>
+
+      {/* Time Slots */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Time {!selectedDate && <span className="text-gray-400 font-normal">(select a date first)</span>}
+        </label>
+        <Controller
+          name="time"
+          control={control}
+          render={({ field }) => (
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {TIME_SLOTS.map((slot) => {
+                const isBooked = bookedTimes.includes(slot)
+                const isSelected = field.value === slot
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    disabled={isBooked || !selectedDate}
+                    onClick={() => field.onChange(slot)}
+                    className={`py-2 px-1 rounded-lg text-sm font-medium transition-colors
+                      ${isBooked
+                        ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
+                        : isSelected
+                          ? 'bg-[#c97830] text-white'
+                          : !selectedDate
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-100 text-gray-600 hover:bg-[#fdf0d5] hover:text-[#c97830]'
+                      }`}
+                  >
+                    {slot}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        />
+        {errors.time && <p className="error-msg mt-1">{errors.time.message}</p>}
       </div>
 
       {/* Notes */}

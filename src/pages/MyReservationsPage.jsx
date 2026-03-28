@@ -7,6 +7,7 @@ import {
   rescheduleReservation,
   autoCompleteReservations,
 } from '../services/reservationService'
+import RescheduleModal from '../components/reservation/RescheduleModal'
 
 const STATUS_STYLES = {
   pending:     'bg-yellow-100 text-yellow-800',
@@ -29,14 +30,7 @@ export default function MyReservationsPage() {
   const [reservations, setReservations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  // Reschedule modal state
-  const [rescheduleId, setRescheduleId] = useState(null)
-  const [newDate, setNewDate] = useState('')
-  const [newTime, setNewTime] = useState('')
-  const [rescheduling, setRescheduling] = useState(false)
-
-  // Cancel confirm modal state
+  const [rescheduleTarget, setRescheduleTarget] = useState(null)
   const [confirmCancel, setConfirmCancel] = useState(null)
 
   useEffect(() => {
@@ -48,20 +42,20 @@ export default function MyReservationsPage() {
   }, [user])
 
   const loadReservations = async () => {
-  setLoading(true)
-  try {
-    await autoCompleteReservations()
-    const data = await fetchMyReservations(user.email)
-    const sorted = data.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    )
-    setReservations(sorted)
-  } catch (err) {
-    setError('Failed to load reservations.')
-  } finally {
-    setLoading(false)
+    setLoading(true)
+    try {
+      await autoCompleteReservations()
+      const data = await fetchMyReservations(user.email)
+      const sorted = data.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      )
+      setReservations(sorted)
+    } catch (err) {
+      setError('Failed to load reservations.')
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   const handleCancel = (id, date, time) => {
     if (isWithin30Minutes(date, time)) return
@@ -81,37 +75,17 @@ export default function MyReservationsPage() {
     }
   }
 
-const handleReschedule = async () => {
-  if (!newDate || !newTime) return
-
-  const selectedDateTime = new Date(`${newDate}T${newTime}`)
-  const now = new Date()
-  if (selectedDateTime <= now) {
-    alert('Please select a future date and time.')
-    return
-  }
-
-  setRescheduling(true)
-  try {
-    await rescheduleReservation(rescheduleId, newDate, newTime)
+  const handleRescheduleConfirm = async (newDate, newTime) => {
+    await rescheduleReservation(rescheduleTarget.id, newDate, newTime)
     setReservations((prev) =>
       prev.map((r) =>
-        r.id === rescheduleId
+        r.id === rescheduleTarget.id
           ? { ...r, date: newDate, time: newTime, status: 'rescheduled' }
           : r
       )
     )
-    setRescheduleId(null)
-    setNewDate('')
-    setNewTime('')
-  } catch (err) {
-    alert('Failed to reschedule. Please try again.')
-  } finally {
-    setRescheduling(false)
+    setRescheduleTarget(null)
   }
-}
-
-  const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
@@ -178,11 +152,7 @@ const handleReschedule = async () => {
                 {canModify && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        setRescheduleId(r.id)
-                        setNewDate(r.date)
-                        setNewTime(r.time)
-                      }}
+                      onClick={() => setRescheduleTarget(r)}
                       disabled={locked}
                       className="px-4 py-2 rounded-lg border border-[#c97830] text-[#c97830] text-sm font-medium hover:bg-[#fdf0d5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
@@ -204,57 +174,12 @@ const handleReschedule = async () => {
       )}
 
       {/* Reschedule Modal */}
-      {rescheduleId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md">
-            <h2
-              className="text-xl font-bold text-gray-900 mb-6"
-              style={{ fontFamily: 'Playfair Display, serif' }}
-            >
-              Reschedule Reservation
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Date
-                </label>
-                <input
-                  type="date"
-                  min={today}
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Time
-                </label>
-                <input
-                  type="time"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setRescheduleId(null)}
-                className="flex-1 btn-outline"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReschedule}
-                disabled={rescheduling || !newDate || !newTime}
-                className="flex-1 btn-primary disabled:opacity-60"
-              >
-                {rescheduling ? 'Saving...' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {rescheduleTarget && (
+        <RescheduleModal
+          reservation={rescheduleTarget}
+          onConfirm={handleRescheduleConfirm}
+          onClose={() => setRescheduleTarget(null)}
+        />
       )}
 
       {/* Cancel Confirm Modal */}

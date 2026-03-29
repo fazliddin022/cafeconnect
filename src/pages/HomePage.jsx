@@ -1,15 +1,36 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { OPENING_HOURS } from '../utils/constants'
 import { menuData } from '../data/menuData'
 import { eventsData } from '../data/eventsData'
 import { formatPrice } from '../utils/formatters'
 import { useAuth } from '../context/AuthContext'
+import { fetchReviews } from '../services/reviewService'
+import ReviewCard from '../components/reviews/ReviewCard'
 
 export default function HomePage() {
   const { user, openAuthModal } = useAuth()
   const navigate = useNavigate()
+  const [reviews, setReviews] = useState([])
   const featuredMenu = menuData.filter((item) => item.isPopular).slice(0, 3)
   const upcomingEvents = eventsData.filter((e) => e.isFeatured).slice(0, 2)
+
+  useEffect(() => {
+    loadReviews()
+  }, [])
+
+  const loadReviews = async () => {
+    try {
+      const data = await fetchReviews()
+      // Rating bo'yicha saralab, eng yuqori 3 tasini olamiz
+      const top = data
+        .sort((a, b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 3)
+      setReviews(top)
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   const handleReserveClick = () => {
     if (user) {
@@ -161,6 +182,23 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Reviews ───────────────────────────────────────────── */}
+      {reviews.length > 0 && (
+        <section className="py-20 bg-[#fffdf7]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-12">
+              <h2 className="section-title">What Our Guests Say</h2>
+              <p className="section-subtitle">Real experiences from real customers.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {reviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── CTA Banner ────────────────────────────────────────── */}
       <section className="bg-gray-900 py-16 text-center">

@@ -8,6 +8,8 @@ import {
   autoCompleteReservations,
 } from '../services/reservationService'
 import RescheduleModal from '../components/reservation/RescheduleModal'
+import ReviewModal from '../components/reviews/ReviewModal'
+import { hasReviewed } from '../services/reviewService'
 
 const STATUS_STYLES = {
   pending:     'bg-yellow-100 text-yellow-800',
@@ -32,6 +34,8 @@ export default function MyReservationsPage() {
   const [error, setError] = useState(null)
   const [rescheduleTarget, setRescheduleTarget] = useState(null)
   const [confirmCancel, setConfirmCancel] = useState(null)
+  const [reviewTarget, setReviewTarget] = useState(null)
+  const [reviewedIds, setReviewedIds] = useState([])
 
   useEffect(() => {
     if (!user) {
@@ -50,6 +54,17 @@ export default function MyReservationsPage() {
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       )
       setReservations(sorted)
+
+      // Qaysi reservationlar uchun review qoldirilganini tekshiramiz
+      const reviewed = await Promise.all(
+        sorted
+          .filter((r) => r.status === 'completed')
+          .map(async (r) => {
+            const already = await hasReviewed(user.uid, r.id)
+            return already ? r.id : null
+          })
+      )
+      setReviewedIds(reviewed.filter(Boolean))
     } catch (err) {
       setError('Failed to load reservations.')
     } finally {
@@ -149,24 +164,39 @@ export default function MyReservationsPage() {
                   )}
                 </div>
 
-                {canModify && (
-                  <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  {canModify && (
+                    <>
+                      <button
+                        onClick={() => setRescheduleTarget(r)}
+                        disabled={locked}
+                        className="px-4 py-2 rounded-lg border border-[#c97830] text-[#c97830] text-sm font-medium hover:bg-[#fdf0d5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Reschedule
+                      </button>
+                      <button
+                        onClick={() => handleCancel(r.id, r.date, r.time)}
+                        disabled={locked}
+                        className="px-4 py-2 rounded-lg border border-red-400 text-red-400 text-sm font-medium hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+
+                  {r.status === 'completed' && !reviewedIds.includes(r.id) && (
                     <button
-                      onClick={() => setRescheduleTarget(r)}
-                      disabled={locked}
-                      className="px-4 py-2 rounded-lg border border-[#c97830] text-[#c97830] text-sm font-medium hover:bg-[#fdf0d5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      onClick={() => setReviewTarget(r)}
+                      className="px-4 py-2 rounded-lg bg-[#fdf0d5] text-[#c97830] text-sm font-medium hover:bg-[#e9ae6b] hover:text-white transition-colors"
                     >
-                      Reschedule
+                      ⭐ Leave a Review
                     </button>
-                    <button
-                      onClick={() => handleCancel(r.id, r.date, r.time)}
-                      disabled={locked}
-                      className="px-4 py-2 rounded-lg border border-red-400 text-red-400 text-sm font-medium hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
+                  )}
+
+                  {r.status === 'completed' && reviewedIds.includes(r.id) && (
+                    <span className="text-sm text-gray-400 py-2">✅ Reviewed</span>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -179,6 +209,18 @@ export default function MyReservationsPage() {
           reservation={rescheduleTarget}
           onConfirm={handleRescheduleConfirm}
           onClose={() => setRescheduleTarget(null)}
+        />
+      )}
+
+      {/* Review Modal */}
+      {reviewTarget && (
+        <ReviewModal
+          reservation={reviewTarget}
+          onClose={() => setReviewTarget(null)}
+          onSubmitted={() => {
+            setReviewedIds((prev) => [...prev, reviewTarget.id])
+            setReviewTarget(null)
+          }}
         />
       )}
 

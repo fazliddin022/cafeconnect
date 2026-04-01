@@ -1,21 +1,34 @@
-import { createContext, useContext, useState } from 'react'
-import { menuData as staticMenuData } from '../data/menuData'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { fetchMenuItems } from '../services/menuService'
 
 const MenuContext = createContext(null)
 
 export function MenuProvider({ children }) {
-  const [menuItems] = useState(staticMenuData)
+  const [menuItems, setMenuItems] = useState([])
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadMenu()
+  }, [])
+
+  const loadMenu = async () => {
+    try {
+      const items = await fetchMenuItems()
+      setMenuItems(items)
+    } catch (err) {
+      console.error('Failed to load menu:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredItems = menuItems.filter((item) => {
-    // Category filter
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory
-    // Search filter — name yoki description bo'yicha
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase())
-
     return matchesCategory && matchesSearch
   })
 
@@ -28,6 +41,8 @@ export function MenuProvider({ children }) {
         setActiveCategory,
         searchQuery,
         setSearchQuery,
+        loading,
+        reloadMenu: loadMenu,
       }}
     >
       {children}

@@ -1,18 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { OPENING_HOURS } from '../utils/constants'
-import { menuData } from '../data/menuData'
 import { eventsData } from '../data/eventsData'
 import { formatPrice } from '../utils/formatters'
 import { useAuth } from '../context/AuthContext'
 import { fetchReviews } from '../services/reviewService'
 import ReviewCard from '../components/reviews/ReviewCard'
+import { useMenuContext } from '../context/MenuContext'
 
 export default function HomePage() {
   const { user, openAuthModal } = useAuth()
   const navigate = useNavigate()
   const [reviews, setReviews] = useState([])
-  const featuredMenu = menuData.filter((item) => item.isPopular).slice(0, 3)
+  const { menuItems } = useMenuContext()
+  const featuredMenu = menuItems.filter((item) => item.isPopular).slice(0, 3)
   const upcomingEvents = eventsData.filter((e) => e.isFeatured).slice(0, 2)
 
   useEffect(() => {
@@ -22,7 +23,6 @@ export default function HomePage() {
   const loadReviews = async () => {
     try {
       const data = await fetchReviews()
-      // Rating bo'yicha saralab, eng yuqori 3 tasini olamiz
       const top = data
         .sort((a, b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 3)
@@ -61,9 +61,7 @@ export default function HomePage() {
             Explore our handcrafted menu, reserve your perfect table, and join us for unforgettable events.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/menu" className="btn-primary text-base">
-              Explore Menu
-            </Link>
+            <Link to="/menu" className="btn-primary text-base">Explore Menu</Link>
             <button
               onClick={handleReserveClick}
               className="btn-outline text-base"
@@ -78,9 +76,7 @@ export default function HomePage() {
       {/* ── Opening Hours ─────────────────────────────────────── */}
       <section className="bg-[#c97830] text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-wrap gap-6 justify-center md:justify-between items-center">
-          <p className="text-2xl font-bold" style={{ fontFamily: 'Playfair Display, serif' }}>
-            We're Open
-          </p>
+          <p className="text-2xl font-bold" style={{ fontFamily: 'Playfair Display, serif' }}>We're Open</p>
           <div className="flex flex-wrap gap-8 justify-center">
             {OPENING_HOURS.map(({ day, hours }) => (
               <div key={day} className="text-center">
@@ -136,9 +132,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link to="/menu" className="btn-outline">
-              View Full Menu →
-            </Link>
+            <Link to="/menu" className="btn-outline">View Full Menu →</Link>
           </div>
         </div>
       </section>
@@ -176,9 +170,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link to="/events" className="btn-outline">
-              All Events →
-            </Link>
+            <Link to="/events" className="btn-outline">All Events →</Link>
           </div>
         </div>
       </section>
@@ -203,15 +195,10 @@ export default function HomePage() {
       {/* ── CTA Banner ────────────────────────────────────────── */}
       <section className="bg-gray-900 py-16 text-center">
         <div className="max-w-2xl mx-auto px-4">
-          <h2
-            className="text-3xl font-bold text-white mb-4"
-            style={{ fontFamily: 'Playfair Display, serif' }}
-          >
+          <h2 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
             Ready for an Unforgettable Experience?
           </h2>
-          <p className="text-gray-400 mb-8">
-            Reserve your table today and let us take care of the rest.
-          </p>
+          <p className="text-gray-400 mb-8">Reserve your table today and let us take care of the rest.</p>
           <button onClick={handleReserveClick} className="btn-primary text-base">
             Make a Reservation
           </button>

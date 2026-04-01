@@ -2,10 +2,22 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { logoutAdmin } from '../services/authService'
-import { fetchReservations, updateReservationStatus, rescheduleReservation, autoCompleteReservations } from '../services/reservationService'
+import {
+  fetchReservations,
+  updateReservationStatus,
+  rescheduleReservation,
+  autoCompleteReservations,
+} from '../services/reservationService'
 import { ref, get } from 'firebase/database'
 import { db } from '../services/firebase'
 import RescheduleModal from '../components/reservation/RescheduleModal'
+import {
+  fetchMenuItems,
+  addMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+} from '../services/menuService'
+import { useMenuContext } from '../context/MenuContext'
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -19,14 +31,35 @@ const STATUS_OPTIONS = ['pending', 'confirmed', 'completed', 'cancelled']
 
 export default function AdminPage() {
   const { user } = useAuth()
+  const [toast, setToast] = useState(null)
+  const showToast = (message, type = 'success') => {
+  setToast({ message, type })
+  setTimeout(() => setToast(null), 3000)
+}
+  const { reloadMenu } = useMenuContext()
   const navigate = useNavigate()
   const [reservations, setReservations] = useState([])
   const [contacts, setContacts] = useState([])
+  const [menuItems, setMenuItems] = useState([])
   const [activeTab, setActiveTab] = useState('reservations')
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState(null)
   const [rescheduleTarget, setRescheduleTarget] = useState(null)
   const [confirmCancel, setConfirmCancel] = useState(null)
+
+  // Menu modal
+  const [showMenuModal, setShowMenuModal] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
+  const [menuForm, setMenuForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: 'coffee',
+    isPopular: false,
+    image: '',
+  })
+  const [menuLoading, setMenuLoading] = useState(false)
+  const [confirmDeleteMenu, setConfirmDeleteMenu] = useState(null)
 
   useEffect(() => {
     if (!user) {
@@ -44,9 +77,11 @@ export default function AdminPage() {
     setLoading(true)
     try {
       await autoCompleteReservations()
+
       const reservationsData = await fetchReservations()
-      const sorted = reservationsData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      setReservations(sorted)
+      setReservations(
+        reservationsData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      )
 
       const contactsSnap = await get(ref(db, 'contacts'))
       if (contactsSnap.exists()) {
@@ -57,6 +92,9 @@ export default function AdminPage() {
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         )
       }
+
+      const items = await fetchMenuItems()
+      setMenuItems(items.sort((a, b) => a.category.localeCompare(b.category)))
     } catch (err) {
       console.error(err)
     } finally {
@@ -88,22 +126,70 @@ export default function AdminPage() {
     setRescheduleTarget(null)
   }
 
-  const handleCancelReservation = (id, date, time) => {
-    setConfirmCancel({ id, date, time })
-  }
+  const handleCancelReservation = (id, date, time) => setConfirmCancel({ id, date, time })
 
   const confirmCancelAction = async () => {
     const { id } = confirmCancel
     setConfirmCancel(null)
     try {
       await updateReservationStatus(id, 'cancelled')
-      setReservations((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: 'cancelled' } : r)
-      )
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)))
     } catch (err) {
       alert('Failed to cancel.')
     }
   }
+
+  const handleOpenMenuModal = (item = null) => {
+    setEditingItem(item)
+    setMenuForm(
+      item
+        ? {
+            name: item.name,
+            description: item.description,
+            price: item.price,
+            category: item.category,
+            isPopular: item.isPopular || false,
+            image: item.image || '',
+          }
+        : { name: '', description: '', price: '', category: 'coffee', isPopular: false, image: '' }
+    )
+    setShowMenuModal(true)
+  }
+
+  const handleSaveMenuItem = async () => {
+  if (!menuForm.name || !menuForm.description || !menuForm.price) return
+  setMenuLoading(true)
+  try {
+    const item = { ...menuForm, price: parseFloat(menuForm.price) }
+    if (editingItem) {
+      await updateMenuItem(editingItem.id, item)
+      setMenuItems((prev) => prev.map((m) => (m.id === editingItem.id ? { ...m, ...item } : m)))
+      showToast('Menu item updated successfully!')
+    } else {
+      const id = await addMenuItem(item)
+      setMenuItems((prev) => [...prev, { id, ...item }])
+      showToast('Menu item added successfully!')
+    }
+    setShowMenuModal(false)
+    await reloadMenu()
+  } catch (err) {
+    showToast('Failed to save menu item.', 'error')
+  } finally {
+    setMenuLoading(false)
+  }
+}
+
+  const handleDeleteMenuItem = async () => {
+  try {
+    await deleteMenuItem(confirmDeleteMenu.id)
+    setMenuItems((prev) => prev.filter((m) => m.id !== confirmDeleteMenu.id))
+    setConfirmDeleteMenu(null)
+    await reloadMenu()
+    showToast('Menu item deleted!')
+  } catch (err) {
+    showToast('Failed to delete menu item.', 'error')
+  }
+}
 
   const handleLogout = async () => {
     await logoutAdmin()
@@ -130,26 +216,24 @@ export default function AdminPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-4 mb-8">
+        <div className="flex gap-4 mb-8 flex-wrap">
           <button
             onClick={() => setActiveTab('reservations')}
-            className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
-              activeTab === 'reservations'
-                ? 'bg-[#c97830] text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'reservations' ? 'bg-[#c97830] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Reservations ({reservations.length})
           </button>
           <button
             onClick={() => setActiveTab('contacts')}
-            className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
-              activeTab === 'contacts'
-                ? 'bg-[#c97830] text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'contacts' ? 'bg-[#c97830] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Messages ({contacts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('menu')}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'menu' ? 'bg-[#c97830] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Menu ({menuItems.length})
           </button>
         </div>
 
@@ -186,7 +270,9 @@ export default function AdminPage() {
                         {updatingId === r.id ? (
                           <span className="text-gray-400 text-sm">Updating...</span>
                         ) : r.status === 'cancelled' || r.status === 'completed' ? (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status]}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status]}`}
+                          >
                             {r.status}
                           </span>
                         ) : (
@@ -196,7 +282,9 @@ export default function AdminPage() {
                             className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c97830] ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}
                           >
                             {STATUS_OPTIONS.map((s) => (
-                              <option key={s} value={s}>{s}</option>
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
                             ))}
                           </select>
                         )}
@@ -227,7 +315,7 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : activeTab === 'contacts' ? (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
@@ -252,7 +340,9 @@ export default function AdminPage() {
                       <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
                       <td className="px-6 py-4 text-gray-500 text-sm">{c.email}</td>
                       <td className="px-6 py-4 text-gray-500 text-sm">{c.subject}</td>
-                      <td className="px-6 py-4 text-gray-500 text-sm max-w-xs truncate">{c.message}</td>
+                      <td className="px-6 py-4 text-gray-500 text-sm max-w-xs truncate">
+                        {c.message}
+                      </td>
                       <td className="px-6 py-4 text-gray-500 text-sm">
                         {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}
                       </td>
@@ -261,6 +351,90 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        ) : (
+          // Menu tab
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2
+                className="text-xl font-bold text-gray-900"
+                style={{ fontFamily: 'Playfair Display, serif' }}
+              >
+                Menu Items
+              </h2>
+              <button
+                onClick={() => handleOpenMenuModal()}
+                className="btn-primary px-4 py-2 text-sm"
+              >
+                + Add Item
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    {['Name', 'Category', 'Price', 'Popular', 'Actions'].map((h) => (
+                      <th key={h} className="text-left px-6 py-3 text-sm font-medium text-gray-500">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {menuItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-12 text-gray-400">
+                        No menu items yet
+                      </td>
+                    </tr>
+                  ) : (
+                    menuItems.map((m) => (
+                      <tr key={m.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-gray-900">{m.name}</p>
+                          <p className="text-gray-400 text-xs mt-0.5 truncate max-w-xs">
+                            {m.description}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#fdf0d5] text-[#c97830]">
+                            {m.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-700 font-medium">
+                          ${m.price?.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4">
+                          {m.isPopular ? (
+                            <span className="text-yellow-500">⭐ Popular</span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleOpenMenuModal(m)}
+                              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[#c97830] hover:text-[#c97830] transition-colors"
+                              title="Edit"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteMenu(m)}
+                              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-400 transition-colors"
+                              title="Delete"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -274,7 +448,7 @@ export default function AdminPage() {
         />
       )}
 
-      {/* Cancel Confirm Modal */}
+      {/* Cancel Reservation Modal */}
       {confirmCancel && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-xl">
@@ -289,7 +463,8 @@ export default function AdminPage() {
               Are you sure you want to cancel reservation for{' '}
               <span className="font-medium text-gray-700">
                 {confirmCancel.date} at {confirmCancel.time}
-              </span>? This action cannot be undone.
+              </span>
+              ?
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmCancel(null)} className="flex-1 btn-outline">
@@ -303,6 +478,152 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add/Edit Menu Modal */}
+      {showMenuModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md">
+            <h2
+              className="text-xl font-bold text-gray-900 mb-6"
+              style={{ fontFamily: 'Playfair Display, serif' }}
+            >
+              {editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={menuForm.name}
+                  onChange={(e) => setMenuForm({ ...menuForm, name: e.target.value })}
+                  className="input-field"
+                  placeholder="Espresso"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={menuForm.description}
+                  onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}
+                  className="input-field resize-none"
+                  rows={2}
+                  placeholder="Rich, concentrated shot..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={menuForm.price}
+                    onChange={(e) => setMenuForm({ ...menuForm, price: e.target.value })}
+                    className="input-field"
+                    placeholder="4.50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={menuForm.category}
+                    onChange={(e) => setMenuForm({ ...menuForm, category: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="coffee">Coffee</option>
+                    <option value="desserts">Desserts</option>
+                    <option value="snacks">Snacks</option>
+                    <option value="drinks">Drinks</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Image URL — griddan tashqarida */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Image URL <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={menuForm.image}
+                  onChange={(e) => setMenuForm({ ...menuForm, image: e.target.value })}
+                  className="input-field"
+                  placeholder="https://images.unsplash.com/..."
+                />
+                {menuForm.image && (
+                  <img
+                    src={menuForm.image}
+                    alt="preview"
+                    className="mt-2 h-24 w-full object-cover rounded-lg"
+                    onError={(e) => (e.target.style.display = 'none')}
+                  />
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isPopular"
+                  checked={menuForm.isPopular}
+                  onChange={(e) => setMenuForm({ ...menuForm, isPopular: e.target.checked })}
+                  className="w-4 h-4 accent-[#c97830]"
+                />
+                <label htmlFor="isPopular" className="text-sm font-medium text-gray-700">
+                  Mark as Popular ⭐
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowMenuModal(false)} className="flex-1 btn-outline">
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveMenuItem}
+                disabled={menuLoading || !menuForm.name || !menuForm.description || !menuForm.price}
+                className="flex-1 btn-primary disabled:opacity-60"
+              >
+                {menuLoading ? 'Saving...' : editingItem ? 'Save Changes' : 'Add Item'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Menu Item Modal */}
+      {confirmDeleteMenu && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-xl">
+            <p className="text-4xl mb-4">🗑️</p>
+            <h2
+              className="text-xl font-bold text-gray-900 mb-2"
+              style={{ fontFamily: 'Playfair Display, serif' }}
+            >
+              Delete Menu Item?
+            </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Are you sure you want to delete{' '}
+              <span className="font-medium text-gray-700">{confirmDeleteMenu.name}</span>?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeleteMenu(null)} className="flex-1 btn-outline">
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteMenuItem}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium
+          ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#c97830]'}`}>
+          {toast.type === 'error' ? '❌' : '✅'} {toast.message}
         </div>
       )}
     </div>

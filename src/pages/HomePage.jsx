@@ -1,23 +1,24 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { OPENING_HOURS } from '../utils/constants'
-import { eventsData } from '../data/eventsData'
 import { formatPrice } from '../utils/formatters'
 import { useAuth } from '../context/AuthContext'
 import { fetchReviews } from '../services/reviewService'
 import ReviewCard from '../components/reviews/ReviewCard'
 import { useMenuContext } from '../context/MenuContext'
+import { fetchEvents } from '../services/eventService'
 
 export default function HomePage() {
   const { user, openAuthModal } = useAuth()
   const navigate = useNavigate()
   const [reviews, setReviews] = useState([])
+  const [upcomingEvents, setUpcomingEvents] = useState([])
   const { menuItems } = useMenuContext()
   const featuredMenu = menuItems.filter((item) => item.isPopular).slice(0, 3)
-  const upcomingEvents = eventsData.filter((e) => e.isFeatured).slice(0, 2)
 
   useEffect(() => {
     loadReviews()
+    loadEvents()
   }, [])
 
   const loadReviews = async () => {
@@ -27,6 +28,20 @@ export default function HomePage() {
         .sort((a, b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 3)
       setReviews(top)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const loadEvents = async () => {
+    try {
+      const data = await fetchEvents()
+      const upcoming = data
+        .filter((e) => new Date(e.date) >= new Date())
+        .filter((e) => e.isFeatured)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 2)
+      setUpcomingEvents(upcoming)
     } catch (err) {
       console.error(err)
     }
@@ -138,42 +153,44 @@ export default function HomePage() {
       </section>
 
       {/* ── Events Preview ────────────────────────────────────── */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="section-title">Upcoming Events</h2>
-            <p className="section-subtitle">Join us for something special.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="card flex gap-4 p-5">
-                <div className="text-center min-w-[60px]">
-                  <p className="text-[#c97830] font-bold text-3xl">
-                    {new Date(event.date).getDate()}
-                  </p>
-                  <p className="text-gray-400 text-xs uppercase">
-                    {new Date(event.date).toLocaleString('default', { month: 'short' })}
-                  </p>
+      {upcomingEvents.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-12">
+              <h2 className="section-title">Upcoming Events</h2>
+              <p className="section-subtitle">Join us for something special.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {upcomingEvents.map((event) => (
+                <div key={event.id} className="card flex gap-4 p-5">
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-[#c97830] font-bold text-3xl">
+                      {new Date(event.date).getDate()}
+                    </p>
+                    <p className="text-gray-400 text-xs uppercase">
+                      {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#c97830] font-semibold uppercase tracking-wide mb-1">
+                      {event.category}
+                    </p>
+                    <h3 className="font-bold text-lg text-gray-900" style={{ fontFamily: 'Playfair Display, serif' }}>
+                      {event.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {event.time} · {event.description.slice(0, 80)}…
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-[#c97830] font-semibold uppercase tracking-wide mb-1">
-                    {event.category}
-                  </p>
-                  <h3 className="font-bold text-lg text-gray-900" style={{ fontFamily: 'Playfair Display, serif' }}>
-                    {event.title}
-                  </h3>
-                  <p className="text-gray-500 text-sm mt-1">
-                    {event.time} · {event.description.slice(0, 80)}…
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="text-center mt-10">
+              <Link to="/events" className="btn-outline">All Events →</Link>
+            </div>
           </div>
-          <div className="text-center mt-10">
-            <Link to="/events" className="btn-outline">All Events →</Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── Reviews ───────────────────────────────────────────── */}
       {reviews.length > 0 && (

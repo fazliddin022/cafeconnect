@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchEvents } from '../services/eventService'
 import { formatDate } from '../utils/formatters'
+import { EventCardSkeleton } from '../components/common/Skeleton'
 
 const CATEGORIES = ['All', 'Music', 'Workshop', 'Dining']
 
@@ -41,7 +42,6 @@ export default function EventsPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-
         {/* Category Filter */}
         <div className="flex flex-wrap gap-2 mb-8 justify-center">
           {CATEGORIES.map((cat) => (
@@ -60,7 +60,11 @@ export default function EventsPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-gray-400">Loading...</div>
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
         ) : filteredEvents.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-4xl mb-3">📅</p>
@@ -105,7 +109,6 @@ export default function EventsPage() {
 function EventCard({ event, past }) {
   return (
     <article className="card flex flex-col sm:flex-row overflow-hidden">
-      {/* Image */}
       <div className="sm:w-48 h-48 sm:h-auto bg-[#fdf0d5] flex-shrink-0 overflow-hidden relative">
         <img
           src={event.image}
@@ -127,8 +130,6 @@ function EventCard({ event, past }) {
           </span>
         )}
       </div>
-
-      {/* Content */}
       <div className="p-6 flex flex-col justify-between">
         <div>
           <span className="text-xs text-[#c97830] font-semibold uppercase tracking-widest">

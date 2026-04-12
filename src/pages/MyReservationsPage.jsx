@@ -10,12 +10,13 @@ import {
 import RescheduleModal from '../components/reservation/RescheduleModal'
 import ReviewModal from '../components/reviews/ReviewModal'
 import { hasReviewed } from '../services/reviewService'
+import { ReservationCardSkeleton } from '../components/common/Skeleton'
 
 const STATUS_STYLES = {
-  pending:     'bg-yellow-100 text-yellow-800',
-  confirmed:   'bg-green-100 text-green-800',
-  cancelled:   'bg-red-100 text-red-800',
-  completed:   'bg-gray-100 text-gray-600',
+  pending: 'bg-yellow-100 text-yellow-800',
+  confirmed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+  completed: 'bg-gray-100 text-gray-600',
   rescheduled: 'bg-blue-100 text-blue-800',
 }
 
@@ -50,9 +51,7 @@ export default function MyReservationsPage() {
     try {
       await autoCompleteReservations()
       const data = await fetchMyReservations(user.email)
-      const sorted = data.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      )
+      const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       setReservations(sorted)
 
       // Qaysi reservationlar uchun review qoldirilganini tekshiramiz
@@ -82,9 +81,7 @@ export default function MyReservationsPage() {
     setConfirmCancel(null)
     try {
       await cancelReservation(id)
-      setReservations((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: 'cancelled' } : r)
-      )
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)))
     } catch (err) {
       alert('Failed to cancel. Please try again.')
     }
@@ -112,24 +109,23 @@ export default function MyReservationsPage() {
         >
           My Reservations
         </h1>
-        <p className="text-gray-500 mt-1">
-          Manage your upcoming and past bookings
-        </p>
+        <p className="text-gray-500 mt-1">Manage your upcoming and past bookings</p>
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="text-center py-20 text-gray-400">Loading...</div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <ReservationCardSkeleton key={i} />
+          ))}
+        </div>
       ) : error ? (
         <div className="text-center py-20 text-red-400">{error}</div>
       ) : reservations.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-5xl mb-4">📅</p>
           <p className="text-gray-500 mb-6">You have no reservations yet.</p>
-          <button
-            onClick={() => navigate('/reservation')}
-            className="btn-primary"
-          >
+          <button onClick={() => navigate('/reservation')} className="btn-primary">
             Make a Reservation
           </button>
         </div>
@@ -149,7 +145,9 @@ export default function MyReservationsPage() {
                     <p className="font-semibold text-gray-900 text-lg">
                       {r.date} — {r.time}
                     </p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}
+                    >
                       {r.status}
                     </span>
                   </div>
@@ -239,13 +237,11 @@ export default function MyReservationsPage() {
               Are you sure you want to cancel your reservation on{' '}
               <span className="font-medium text-gray-700">
                 {confirmCancel.date} at {confirmCancel.time}
-              </span>? This action cannot be undone.
+              </span>
+              ? This action cannot be undone.
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmCancel(null)}
-                className="flex-1 btn-outline"
-              >
+              <button onClick={() => setConfirmCancel(null)} className="flex-1 btn-outline">
                 Keep it
               </button>
               <button

@@ -1,8 +1,19 @@
 import { useMenuContext } from '../../context/MenuContext'
 import MenuCard from './MenuCard'
+import { MenuCardSkeleton } from '../common/Skeleton'
 
 export default function MenuGrid() {
-  const { filteredItems } = useMenuContext()
+  const { filteredItems, loading } = useMenuContext()
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <MenuCardSkeleton key={i} />
+        ))}
+      </div>
+    )
+  }
 
   if (filteredItems.length === 0) {
     return (

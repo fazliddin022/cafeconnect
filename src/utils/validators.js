@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+// Phone validation — O'zbekiston va xalqaro format
+const phoneRegex = /^(\+998|998)?[\s\-]?([0-9]{2})[\s\-]?([0-9]{3})[\s\-]?([0-9]{2})[\s\-]?([0-9]{2})$/
+
 // Reservation form schema
 export const reservationSchema = z.object({
   name: z
@@ -11,7 +14,11 @@ export const reservationSchema = z.object({
     .email('Please enter a valid email address'),
   phone: z
     .string()
-    .regex(/^\+?[0-9\s\-()]{7,15}$/, 'Please enter a valid phone number'),
+    .min(1, 'Phone number is required')
+    .refine(
+      (val) => phoneRegex.test(val.replace(/\s/g, '')),
+      'Please enter a valid phone number (e.g. +998 90 123 45 67)'
+    ),
   date: z
     .string()
     .min(1, 'Please select a date'),

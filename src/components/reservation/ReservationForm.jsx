@@ -5,12 +5,18 @@ import { useReservationContext } from '../../context/ReservationContext'
 import { submitReservation, fetchReservations } from '../../services/reservationService'
 import { useState, useEffect } from 'react'
 
-// Café ning ish vaqtlari bo'yicha time slots
 const TIME_SLOTS = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
   '13:00', '14:00', '15:00', '16:00', '17:00',
   '18:00', '19:00', '20:00', '21:00',
 ]
+
+// Input border — xato bo'lsa qizil, to'g'ri bo'lsa yashil
+const inputClass = (error, value) => {
+  if (error) return 'input-field border-red-400 focus:ring-red-400'
+  if (value) return 'input-field border-green-400 focus:ring-green-400'
+  return 'input-field'
+}
 
 export default function ReservationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -30,16 +36,20 @@ export default function ReservationForm() {
   } = useForm({
     resolver: zodResolver(reservationSchema),
     defaultValues: { guests: 2 },
+    mode: 'onChange', // ← real-time validation
   })
 
   const watchedDate = watch('date')
+  const watchedName = watch('name')
+  const watchedEmail = watch('email')
+  const watchedPhone = watch('phone')
+  const watchedGuests = watch('guests')
 
-  // Sana o'zgarganda band vaqtlarni yuklaymiz
   useEffect(() => {
     if (!watchedDate) return
     setSelectedDate(watchedDate)
     loadBookedTimes(watchedDate)
-    setValue('time', '') // Vaqtni reset qilamiz
+    setValue('time', '')
   }, [watchedDate])
 
   const loadBookedTimes = async (date) => {
@@ -82,10 +92,18 @@ export default function ReservationForm() {
         </label>
         <input
           {...register('name')}
-          className="input-field"
+          className={inputClass(errors.name, watchedName)}
           placeholder="John Doe"
         />
-        {errors.name && <p className="error-msg">{errors.name.message}</p>}
+        {errors.name ? (
+          <p className="error-msg flex items-center gap-1 mt-1">
+            <span>⚠️</span> {errors.name.message}
+          </p>
+        ) : watchedName?.length >= 2 ? (
+          <p className="text-green-500 text-xs mt-1 flex items-center gap-1">
+            <span>✓</span> Looks good!
+          </p>
+        ) : null}
       </div>
 
       {/* Email + Phone */}
@@ -95,20 +113,36 @@ export default function ReservationForm() {
           <input
             {...register('email')}
             type="email"
-            className="input-field"
+            className={inputClass(errors.email, watchedEmail && !errors.email)}
             placeholder="john@email.com"
           />
-          {errors.email && <p className="error-msg">{errors.email.message}</p>}
+          {errors.email ? (
+            <p className="error-msg flex items-center gap-1 mt-1">
+              <span>⚠️</span> {errors.email.message}
+            </p>
+          ) : watchedEmail && !errors.email ? (
+            <p className="text-green-500 text-xs mt-1 flex items-center gap-1">
+              <span>✓</span> Valid email
+            </p>
+          ) : null}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
           <input
             {...register('phone')}
             type="tel"
-            className="input-field"
-            placeholder="+1 234 567 8900"
+            className={inputClass(errors.phone, watchedPhone && !errors.phone)}
+            placeholder="+998 90 123 45 67"
           />
-          {errors.phone && <p className="error-msg">{errors.phone.message}</p>}
+          {errors.phone ? (
+            <p className="error-msg flex items-center gap-1 mt-1">
+              <span>⚠️</span> {errors.phone.message}
+            </p>
+          ) : watchedPhone && !errors.phone ? (
+            <p className="text-green-500 text-xs mt-1 flex items-center gap-1">
+              <span>✓</span> Valid phone number
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -120,9 +154,13 @@ export default function ReservationForm() {
             {...register('date')}
             type="date"
             min={today}
-            className="input-field"
+            className={inputClass(errors.date, watchedDate && !errors.date)}
           />
-          {errors.date && <p className="error-msg">{errors.date.message}</p>}
+          {errors.date && (
+            <p className="error-msg flex items-center gap-1 mt-1">
+              <span>⚠️</span> {errors.date.message}
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
@@ -131,9 +169,13 @@ export default function ReservationForm() {
             type="number"
             min={1}
             max={12}
-            className="input-field"
+            className={inputClass(errors.guests, watchedGuests && !errors.guests)}
           />
-          {errors.guests && <p className="error-msg">{errors.guests.message}</p>}
+          {errors.guests && (
+            <p className="error-msg flex items-center gap-1 mt-1">
+              <span>⚠️</span> {errors.guests.message}
+            </p>
+          )}
         </div>
       </div>
 
@@ -173,7 +215,11 @@ export default function ReservationForm() {
             </div>
           )}
         />
-        {errors.time && <p className="error-msg mt-1">{errors.time.message}</p>}
+        {errors.time && (
+          <p className="error-msg flex items-center gap-1 mt-1">
+            <span>⚠️</span> {errors.time.message}
+          </p>
+        )}
       </div>
 
       {/* Notes */}
@@ -187,7 +233,11 @@ export default function ReservationForm() {
           className="input-field resize-none"
           placeholder="Allergies, seating preferences, occasion..."
         />
-        {errors.notes && <p className="error-msg">{errors.notes.message}</p>}
+        {errors.notes && (
+          <p className="error-msg flex items-center gap-1 mt-1">
+            <span>⚠️</span> {errors.notes.message}
+          </p>
+        )}
       </div>
 
       {error && <p className="error-msg text-center">{error}</p>}

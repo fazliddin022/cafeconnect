@@ -11,6 +11,7 @@ import RescheduleModal from '../components/reservation/RescheduleModal'
 import ReviewModal from '../components/reviews/ReviewModal'
 import { hasReviewed } from '../services/reviewService'
 import { ReservationCardSkeleton } from '../components/common/Skeleton'
+import Pagination from '../components/common/Pagination'
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -19,6 +20,8 @@ const STATUS_STYLES = {
   completed: 'bg-gray-100 text-gray-600',
   rescheduled: 'bg-blue-100 text-blue-800',
 }
+
+const ITEMS_PER_PAGE = 5
 
 function isWithin30Minutes(date, time) {
   const reservationTime = new Date(`${date}T${time}`)
@@ -37,6 +40,7 @@ export default function MyReservationsPage() {
   const [confirmCancel, setConfirmCancel] = useState(null)
   const [reviewTarget, setReviewTarget] = useState(null)
   const [reviewedIds, setReviewedIds] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     if (!user) {
@@ -53,8 +57,8 @@ export default function MyReservationsPage() {
       const data = await fetchMyReservations(user.email)
       const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       setReservations(sorted)
+      setCurrentPage(1)
 
-      // Qaysi reservationlar uchun review qoldirilganini tekshiramiz
       const reviewed = await Promise.all(
         sorted
           .filter((r) => r.status === 'completed')
@@ -99,6 +103,12 @@ export default function MyReservationsPage() {
     setRescheduleTarget(null)
   }
 
+  const totalPages = Math.ceil(reservations.length / ITEMS_PER_PAGE)
+  const paginatedReservations = reservations.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       {/* Header */}
@@ -130,75 +140,90 @@ export default function MyReservationsPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {reservations.map((r) => {
-            const locked = isWithin30Minutes(r.date, r.time)
-            const canModify = r.status !== 'cancelled' && r.status !== 'completed'
+        <>
+          {/* Reservations count */}
+          <p className="text-sm text-gray-400 mb-4">
+            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, reservations.length)} of {reservations.length} reservations
+          </p>
 
-            return (
-              <div
-                key={r.id}
-                className="bg-white rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-              >
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <p className="font-semibold text-gray-900 text-lg">
-                      {r.date} — {r.time}
+          <div className="space-y-4">
+            {paginatedReservations.map((r) => {
+              const locked = isWithin30Minutes(r.date, r.time)
+              const canModify = r.status !== 'cancelled' && r.status !== 'completed'
+
+              return (
+                <div
+                  key={r.id}
+                  className="bg-white rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                >
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <p className="font-semibold text-gray-900 text-lg">
+                        {r.date} — {r.time}
+                      </p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}>
+                        {r.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      👥 {r.guests} guests
+                      {r.notes && <span className="ml-3 italic">"{r.notes}"</span>}
                     </p>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}
-                    >
-                      {r.status}
-                    </span>
+                    {locked && canModify && (
+                      <p className="text-red-400 text-xs mt-1">
+                        ⚠️ Cannot modify — less than 30 minutes before booking
+                      </p>
+                    )}
                   </div>
-                  <p className="text-gray-500 text-sm">
-                    👥 {r.guests} guests
-                    {r.notes && <span className="ml-3 italic">"{r.notes}"</span>}
-                  </p>
-                  {locked && canModify && (
-                    <p className="text-red-400 text-xs mt-1">
-                      ⚠️ Cannot modify — less than 30 minutes before booking
-                    </p>
-                  )}
-                </div>
 
-                <div className="flex gap-2 flex-wrap">
-                  {canModify && (
-                    <>
+                  <div className="flex gap-2 flex-wrap">
+                    {canModify && (
+                      <>
+                        <button
+                          onClick={() => setRescheduleTarget(r)}
+                          disabled={locked}
+                          className="px-4 py-2 rounded-lg border border-[#c97830] text-[#c97830] text-sm font-medium hover:bg-[#fdf0d5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Reschedule
+                        </button>
+                        <button
+                          onClick={() => handleCancel(r.id, r.date, r.time)}
+                          disabled={locked}
+                          className="px-4 py-2 rounded-lg border border-red-400 text-red-400 text-sm font-medium hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+
+                    {r.status === 'completed' && !reviewedIds.includes(r.id) && (
                       <button
-                        onClick={() => setRescheduleTarget(r)}
-                        disabled={locked}
-                        className="px-4 py-2 rounded-lg border border-[#c97830] text-[#c97830] text-sm font-medium hover:bg-[#fdf0d5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        onClick={() => setReviewTarget(r)}
+                        className="px-4 py-2 rounded-lg bg-[#fdf0d5] text-[#c97830] text-sm font-medium hover:bg-[#e9ae6b] hover:text-white transition-colors"
                       >
-                        Reschedule
+                        ⭐ Leave a Review
                       </button>
-                      <button
-                        onClick={() => handleCancel(r.id, r.date, r.time)}
-                        disabled={locked}
-                        className="px-4 py-2 rounded-lg border border-red-400 text-red-400 text-sm font-medium hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  )}
+                    )}
 
-                  {r.status === 'completed' && !reviewedIds.includes(r.id) && (
-                    <button
-                      onClick={() => setReviewTarget(r)}
-                      className="px-4 py-2 rounded-lg bg-[#fdf0d5] text-[#c97830] text-sm font-medium hover:bg-[#e9ae6b] hover:text-white transition-colors"
-                    >
-                      ⭐ Leave a Review
-                    </button>
-                  )}
-
-                  {r.status === 'completed' && reviewedIds.includes(r.id) && (
-                    <span className="text-sm text-gray-400 py-2">✅ Reviewed</span>
-                  )}
+                    {r.status === 'completed' && reviewedIds.includes(r.id) && (
+                      <span className="text-sm text-gray-400 py-2">✅ Reviewed</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => {
+              setCurrentPage(page)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+          />
+        </>
       )}
 
       {/* Reschedule Modal */}

@@ -11,7 +11,6 @@ const TIME_SLOTS = [
   '18:00', '19:00', '20:00', '21:00',
 ]
 
-// Input border — xato bo'lsa qizil, to'g'ri bo'lsa yashil
 const inputClass = (error, value) => {
   if (error) return 'input-field border-red-400 focus:ring-red-400'
   if (value) return 'input-field border-green-400 focus:ring-green-400'
@@ -36,7 +35,7 @@ export default function ReservationForm() {
   } = useForm({
     resolver: zodResolver(reservationSchema),
     defaultValues: { guests: 2 },
-    mode: 'onChange', // ← real-time validation
+    mode: 'onChange',
   })
 
   const watchedDate = watch('date')
@@ -64,6 +63,17 @@ export default function ReservationForm() {
     }
   }
 
+  const isSlotDisabled = (slot) => {
+    if (!selectedDate) return true
+    if (bookedTimes.includes(slot)) return true
+    const today = new Date().toISOString().split('T')[0]
+    if (selectedDate === today) {
+      const slotTime = new Date(`${selectedDate}T${slot}`)
+      return slotTime <= new Date()
+    }
+    return false
+  }
+
   const onSubmit = async (data) => {
     setIsSubmitting(true)
     setError(null)
@@ -87,22 +97,16 @@ export default function ReservationForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
       {/* Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Full Name
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
         <input
           {...register('name')}
           className={inputClass(errors.name, watchedName)}
           placeholder="John Doe"
         />
         {errors.name ? (
-          <p className="error-msg flex items-center gap-1 mt-1">
-            <span>⚠️</span> {errors.name.message}
-          </p>
+          <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.name.message}</p>
         ) : watchedName?.length >= 2 ? (
-          <p className="text-green-500 text-xs mt-1 flex items-center gap-1">
-            <span>✓</span> Looks good!
-          </p>
+          <p className="text-green-500 text-xs mt-1 flex items-center gap-1"><span>✓</span> Looks good!</p>
         ) : null}
       </div>
 
@@ -117,13 +121,9 @@ export default function ReservationForm() {
             placeholder="john@email.com"
           />
           {errors.email ? (
-            <p className="error-msg flex items-center gap-1 mt-1">
-              <span>⚠️</span> {errors.email.message}
-            </p>
+            <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.email.message}</p>
           ) : watchedEmail && !errors.email ? (
-            <p className="text-green-500 text-xs mt-1 flex items-center gap-1">
-              <span>✓</span> Valid email
-            </p>
+            <p className="text-green-500 text-xs mt-1 flex items-center gap-1"><span>✓</span> Valid email</p>
           ) : null}
         </div>
         <div>
@@ -135,13 +135,9 @@ export default function ReservationForm() {
             placeholder="+998 90 123 45 67"
           />
           {errors.phone ? (
-            <p className="error-msg flex items-center gap-1 mt-1">
-              <span>⚠️</span> {errors.phone.message}
-            </p>
+            <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.phone.message}</p>
           ) : watchedPhone && !errors.phone ? (
-            <p className="text-green-500 text-xs mt-1 flex items-center gap-1">
-              <span>✓</span> Valid phone number
-            </p>
+            <p className="text-green-500 text-xs mt-1 flex items-center gap-1"><span>✓</span> Valid phone number</p>
           ) : null}
         </div>
       </div>
@@ -157,9 +153,7 @@ export default function ReservationForm() {
             className={inputClass(errors.date, watchedDate && !errors.date)}
           />
           {errors.date && (
-            <p className="error-msg flex items-center gap-1 mt-1">
-              <span>⚠️</span> {errors.date.message}
-            </p>
+            <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.date.message}</p>
           )}
         </div>
         <div>
@@ -172,9 +166,7 @@ export default function ReservationForm() {
             className={inputClass(errors.guests, watchedGuests && !errors.guests)}
           />
           {errors.guests && (
-            <p className="error-msg flex items-center gap-1 mt-1">
-              <span>⚠️</span> {errors.guests.message}
-            </p>
+            <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.guests.message}</p>
           )}
         </div>
       </div>
@@ -191,21 +183,26 @@ export default function ReservationForm() {
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
               {TIME_SLOTS.map((slot) => {
                 const isBooked = bookedTimes.includes(slot)
+                const isDisabled = isSlotDisabled(slot)
+                const isPast = !isBooked && isDisabled && selectedDate
                 const isSelected = field.value === slot
+
                 return (
                   <button
                     key={slot}
                     type="button"
-                    disabled={isBooked || !selectedDate}
+                    disabled={isDisabled}
                     onClick={() => field.onChange(slot)}
                     className={`py-2 px-1 rounded-lg text-sm font-medium transition-colors
                       ${isBooked
                         ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
-                        : isSelected
-                          ? 'bg-[#c97830] text-white'
-                          : !selectedDate
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-100 text-gray-600 hover:bg-[#fdf0d5] hover:text-[#c97830]'
+                        : isPast
+                          ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-[#c97830] text-white'
+                            : !selectedDate
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-100 text-gray-600 hover:bg-[#fdf0d5] hover:text-[#c97830]'
                       }`}
                   >
                     {slot}
@@ -216,9 +213,7 @@ export default function ReservationForm() {
           )}
         />
         {errors.time && (
-          <p className="error-msg flex items-center gap-1 mt-1">
-            <span>⚠️</span> {errors.time.message}
-          </p>
+          <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.time.message}</p>
         )}
       </div>
 
@@ -234,9 +229,7 @@ export default function ReservationForm() {
           placeholder="Allergies, seating preferences, occasion..."
         />
         {errors.notes && (
-          <p className="error-msg flex items-center gap-1 mt-1">
-            <span>⚠️</span> {errors.notes.message}
-          </p>
+          <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.notes.message}</p>
         )}
       </div>
 

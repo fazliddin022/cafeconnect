@@ -33,6 +33,16 @@ export default function RescheduleModal({ reservation, onConfirm, onClose }) {
     }
   }
 
+  const isSlotDisabled = (slot) => {
+    if (!newDate) return true
+    if (bookedTimes.includes(slot)) return true
+    if (newDate === today) {
+      const slotTime = new Date(`${newDate}T${slot}`)
+      return slotTime <= new Date()
+    }
+    return false
+  }
+
   const handleConfirm = async () => {
     if (!newDate || !newTime) {
       setError('Please select both date and time.')
@@ -70,9 +80,7 @@ export default function RescheduleModal({ reservation, onConfirm, onClose }) {
         <div className="space-y-5">
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              New Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Date</label>
             <input
               type="date"
               min={today}
@@ -91,21 +99,26 @@ export default function RescheduleModal({ reservation, onConfirm, onClose }) {
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
               {TIME_SLOTS.map((slot) => {
                 const isBooked = bookedTimes.includes(slot)
+                const isDisabled = isSlotDisabled(slot)
+                const isPast = !isBooked && isDisabled && newDate
                 const isSelected = newTime === slot
+
                 return (
                   <button
                     key={slot}
                     type="button"
-                    disabled={isBooked || !newDate}
+                    disabled={isDisabled}
                     onClick={() => setNewTime(slot)}
                     className={`py-2 px-1 rounded-lg text-sm font-medium transition-colors
                       ${isBooked
                         ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
-                        : isSelected
-                          ? 'bg-[#c97830] text-white'
-                          : !newDate
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-100 text-gray-600 hover:bg-[#fdf0d5] hover:text-[#c97830]'
+                        : isPast
+                          ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-[#c97830] text-white'
+                            : !newDate
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-100 text-gray-600 hover:bg-[#fdf0d5] hover:text-[#c97830]'
                       }`}
                   >
                     {slot}
@@ -119,9 +132,7 @@ export default function RescheduleModal({ reservation, onConfirm, onClose }) {
         {error && <p className="error-msg mt-4 text-center">{error}</p>}
 
         <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 btn-outline">
-            Cancel
-          </button>
+          <button onClick={onClose} className="flex-1 btn-outline">Cancel</button>
           <button
             onClick={handleConfirm}
             disabled={saving || !newDate || !newTime}

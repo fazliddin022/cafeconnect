@@ -21,3 +21,38 @@ export async function updateEvent(id, event) {
 export async function deleteEvent(id) {
   await remove(ref(db, `events/${id}`))
 }
+
+// Event ga register bo'lish
+export async function registerForEvent(eventId, userId) {
+  await set(ref(db, `eventRegistrations/${eventId}/${userId}`), true)
+}
+
+// Event dan register ni bekor qilish
+export async function unregisterFromEvent(eventId, userId) {
+  await remove(ref(db, `eventRegistrations/${eventId}/${userId}`))
+}
+
+// User shu event ga registered bo'lganini tekshirish
+export async function isRegistered(eventId, userId) {
+  const snapshot = await get(ref(db, `eventRegistrations/${eventId}/${userId}`))
+  return snapshot.exists()
+}
+
+// Event dagi barcha registrationlarni olish
+export async function fetchEventRegistrations(eventId) {
+  const snapshot = await get(ref(db, `eventRegistrations/${eventId}`))
+  if (!snapshot.exists()) return []
+  return Object.keys(snapshot.val())
+}
+
+// Barcha eventlar uchun registration countlarni olish
+export async function fetchAllRegistrationCounts() {
+  const snapshot = await get(ref(db, 'eventRegistrations'))
+  if (!snapshot.exists()) return {}
+  const data = snapshot.val()
+  const counts = {}
+  Object.entries(data).forEach(([eventId, users]) => {
+    counts[eventId] = Object.keys(users).length
+  })
+  return counts
+}

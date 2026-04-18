@@ -13,7 +13,7 @@ import { db } from '../services/firebase'
 import RescheduleModal from '../components/reservation/RescheduleModal'
 import { fetchMenuItems, addMenuItem, updateMenuItem, deleteMenuItem } from '../services/menuService'
 import { useMenuContext } from '../context/MenuContext'
-import { fetchEvents, addEvent, updateEvent, deleteEvent } from '../services/eventService'
+import { fetchEvents, addEvent, updateEvent, deleteEvent, fetchAllRegistrationCounts } from '../services/eventService'
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -38,6 +38,7 @@ export default function AdminPage() {
   const [contacts, setContacts] = useState([])
   const [menuItems, setMenuItems] = useState([])
   const [events, setEvents] = useState([])
+  const [registrationCounts, setRegistrationCounts] = useState({})
   const [activeTab, setActiveTab] = useState('reservations')
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState(null)
@@ -91,6 +92,9 @@ export default function AdminPage() {
 
       const eventsData = await fetchEvents()
       setEvents(eventsData.sort((a, b) => new Date(a.date) - new Date(b.date)))
+
+      const counts = await fetchAllRegistrationCounts()
+      setRegistrationCounts(counts)
     } catch (err) {
       console.error(err)
     } finally {
@@ -135,7 +139,6 @@ export default function AdminPage() {
     }
   }
 
-  // Menu handlers
   const handleOpenMenuModal = (item = null) => {
     setEditingItem(item)
     setMenuForm(item ? {
@@ -180,7 +183,6 @@ export default function AdminPage() {
     }
   }
 
-  // Event handlers
   const handleOpenEventModal = (event = null) => {
     setEditingEvent(event)
     setEventForm(event ? {
@@ -392,14 +394,14 @@ export default function AdminPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    {['Title', 'Category', 'Date', 'Time', 'Featured', 'Actions'].map((h) => (
+                    {['Title', 'Category', 'Date', 'Time', 'Featured', 'Registered', 'Actions'].map((h) => (
                       <th key={h} className="text-left px-6 py-3 text-sm font-medium text-gray-500">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {events.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-12 text-gray-400">No events yet</td></tr>
+                    <tr><td colSpan={7} className="text-center py-12 text-gray-400">No events yet</td></tr>
                   ) : (
                     events.map((e) => (
                       <tr key={e.id} className="hover:bg-gray-50">
@@ -413,6 +415,11 @@ export default function AdminPage() {
                         <td className="px-6 py-4 text-gray-500 text-sm">{e.date}</td>
                         <td className="px-6 py-4 text-gray-500 text-sm">{e.time}</td>
                         <td className="px-6 py-4">{e.isFeatured ? <span className="text-yellow-500">⭐</span> : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            👥 {registrationCounts[e.id] || 0}
+                          </span>
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
                             <button onClick={() => handleOpenEventModal(e)} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[#c97830] hover:text-[#c97830] transition-colors" title="Edit">✏️</button>

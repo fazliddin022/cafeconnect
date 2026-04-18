@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { fetchEvents } from '../services/eventService'
+import { fetchEvents, registerForEvent, unregisterFromEvent, isRegistered } from '../services/eventService'
 import { formatDate } from '../utils/formatters'
 import { EventCardSkeleton } from '../components/common/Skeleton'
+import { useAuth } from '../context/AuthContext'
 
 const CATEGORIES = ['All', 'Music', 'Workshop', 'Dining']
 
@@ -9,10 +10,18 @@ export default function EventsPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
+  const [registeredIds, setRegisteredIds] = useState([])
+  const { user, openAuthModal } = useAuth()
 
   useEffect(() => {
     loadEvents()
   }, [])
+
+  useEffect(() => {
+    if (user && events.length > 0) {
+      loadRegistrations()
+    }
+  }, [user, events])
 
   const loadEvents = async () => {
     try {
@@ -23,6 +32,38 @@ export default function EventsPage() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRegistrations = async () => {
+    try {
+      const results = await Promise.all(
+        events.map(async (e) => {
+          const registered = await isRegistered(e.id, user.uid)
+          return registered ? e.id : null
+        })
+      )
+      setRegisteredIds(results.filter(Boolean))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleRegister = async (eventId) => {
+    if (!user) {
+      openAuthModal()
+      return
+    }
+    try {
+      if (registeredIds.includes(eventId)) {
+        await unregisterFromEvent(eventId, user.uid)
+        setRegisteredIds((prev) => prev.filter((id) => id !== eventId))
+      } else {
+        await registerForEvent(eventId, user.uid)
+        setRegisteredIds((prev) => [...prev, eventId])
+      }
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -80,7 +121,12 @@ export default function EventsPage() {
                 </h2>
                 <div className="space-y-6">
                   {upcomingEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      isRegistered={registeredIds.includes(event.id)}
+                      onRegister={() => handleRegister(event.id)}
+                    />
                   ))}
                 </div>
               </div>
@@ -106,7 +152,7 @@ export default function EventsPage() {
   )
 }
 
-function EventCard({ event, past }) {
+function EventCard({ event, past, isRegistered, onRegister }) {
   return (
     <article className="card flex flex-col sm:flex-row overflow-hidden">
       <div className="sm:w-48 h-48 sm:h-auto bg-[#fdf0d5] flex-shrink-0 overflow-hidden relative">
@@ -130,7 +176,7 @@ function EventCard({ event, past }) {
           </span>
         )}
       </div>
-      <div className="p-6 flex flex-col justify-between">
+      <div className="p-6 flex flex-col justify-between flex-1">
         <div>
           <span className="text-xs text-[#c97830] font-semibold uppercase tracking-widest">
             {event.category}
@@ -145,9 +191,25 @@ function EventCard({ event, past }) {
             {event.description}
           </p>
         </div>
-        <div className="flex items-center gap-4 mt-4 text-sm text-gray-400">
-          <span>📅 {formatDate(event.date)}</span>
-          <span>🕐 {event.time}</span>
+        <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+          <div className="flex items-center gap-4 text-sm text-gray-400">
+            <span>📅 {formatDate(event.date)}</span>
+            <span>🕐 {event.time}</span>
+          </div>
+
+          {/* Register button — faqat upcoming events uchun */}
+          {!past && onRegister && (
+            <button
+              onClick={onRegister}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                ${isRegistered
+                  ? 'bg-green-100 text-green-700 hover:bg-red-50 hover:text-red-500'
+                  : 'btn-primary'
+                }`}
+            >
+              {isRegistered ? '✅ Registered' : 'Register →'}
+            </button>
+          )}
         </div>
       </div>
     </article>

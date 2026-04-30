@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { logoutAdmin } from '../../services/authService'
 import AuthModal from './AuthModal'
 
@@ -16,6 +17,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const { user, authModal, openAuthModal, closeAuthModal } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const dropdownRef = useRef(null)
 
@@ -67,8 +69,18 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Auth buttons */}
+        {/* Auth buttons + Dark Mode */}
         <div className="hidden md:flex items-center gap-3">
+
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-lg hover:bg-gray-50 transition-colors"
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+
           {user ? (
             <>
               <Link to="/reservation" className="btn-primary text-sm px-4 py-2">
@@ -128,13 +140,21 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden text-gray-600"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? '✕' : '☰'}
-        </button>
+        {/* Mobile hamburger + Dark Mode */}
+        <div className="md:hidden flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-lg hover:bg-gray-50 transition-colors"
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+          <button
+            className="text-gray-600 text-xl"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? '✕' : '☰'}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}

@@ -2,7 +2,9 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { reservationSchema } from '../../utils/validators'
 import { useReservationContext } from '../../context/ReservationContext'
+import { useAuth } from '../../context/AuthContext'
 import { submitReservation, fetchReservations } from '../../services/reservationService'
+import { getUserPhone, saveUserPhone } from '../../services/authService'
 import { useState, useEffect } from 'react'
 
 const TIME_SLOTS = [
@@ -23,6 +25,7 @@ export default function ReservationForm() {
   const [bookedTimes, setBookedTimes] = useState([])
   const [selectedDate, setSelectedDate] = useState('')
   const { confirmReservation } = useReservationContext()
+  const { user } = useAuth()
 
   const {
     register,
@@ -34,7 +37,11 @@ export default function ReservationForm() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(reservationSchema),
-    defaultValues: { guests: 2 },
+    defaultValues: {
+      guests: 2,
+      name: user?.displayName || '',
+      email: user?.email || '',
+    },
     mode: 'onChange',
   })
 
@@ -43,6 +50,16 @@ export default function ReservationForm() {
   const watchedEmail = watch('email')
   const watchedPhone = watch('phone')
   const watchedGuests = watch('guests')
+
+  // Phone ni Firebase dan yuklash
+  useEffect(() => {
+    if (!user) return
+    const loadPhone = async () => {
+      const phone = await getUserPhone(user.uid)
+      if (phone) setValue('phone', phone)
+    }
+    loadPhone()
+  }, [user])
 
   useEffect(() => {
     if (!watchedDate) return
@@ -79,8 +96,14 @@ export default function ReservationForm() {
     setError(null)
     try {
       await submitReservation(data)
+      await saveUserPhone(user.uid, data.phone)
       confirmReservation(data)
-      reset()
+      reset({
+        guests: 2,
+        name: user?.displayName || '',
+        email: user?.email || '',
+        phone: data.phone,
+      })
       setBookedTimes([])
       setSelectedDate('')
     } catch (err) {

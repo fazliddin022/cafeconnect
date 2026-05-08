@@ -1,5 +1,5 @@
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { ref, get } from 'firebase/database'
+import { ref, get, set } from 'firebase/database'
 import { auth, db } from './firebase'
 
 export async function loginAdmin(email, password) {
@@ -18,9 +18,30 @@ export async function getUserRole(uid) {
     if (snapshot.exists()) {
       return snapshot.val().role
     }
-    return 'customer' // users/ da yo'q bo'lsa — oddiy customer
+    return 'customer'
   } catch (err) {
     console.error('Failed to get user role:', err)
     return 'customer'
+  }
+}
+
+// User phone olish
+export async function getUserPhone(uid) {
+  try {
+    const snapshot = await get(ref(db, `users/${uid}/phone`))
+    if (snapshot.exists()) return snapshot.val()
+    return ''
+  } catch (err) {
+    console.error('Failed to get phone:', err)
+    return ''
+  }
+}
+
+// User phone saqlash
+export async function saveUserPhone(uid, phone) {
+  try {
+    await set(ref(db, `users/${uid}/phone`), phone)
+  } catch (err) {
+    console.error('Failed to save phone:', err)
   }
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { auth } from '../services/firebase'
+import { ref, get, set } from 'firebase/database'
+import { auth, db } from '../services/firebase'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -18,7 +19,18 @@ export default function RegisterPage() {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password)
       await updateProfile(result.user, { displayName: name })
-      navigate('/profile')
+
+      // Faqat users/ da yo'q bo'lsa customer qilamiz
+      const snapshot = await get(ref(db, `users/${result.user.uid}`))
+      if (!snapshot.exists()) {
+        await set(ref(db, `users/${result.user.uid}`), {
+          email,
+          name,
+          role: 'customer',
+        })
+      }
+
+      navigate('/', { replace: true })
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         setError('This email is already registered.')

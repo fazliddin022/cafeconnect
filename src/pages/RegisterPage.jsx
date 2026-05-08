@@ -1,31 +1,45 @@
-import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { ref, get, set } from 'firebase/database'
 import { auth, db } from '../services/firebase'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { registerSchema } from '../utils/validators'
+
+const inputClass = (error, value) => {
+  if (error) return 'input-field border-red-400 focus:ring-red-400'
+  if (value) return 'input-field border-green-400 focus:ring-green-400'
+  return 'input-field'
+}
 
 export default function RegisterPage() {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, password)
-      await updateProfile(result.user, { displayName: name })
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    mode: 'onChange',
+  })
 
-      // Faqat users/ da yo'q bo'lsa customer qilamiz
+  const watchedName = watch('name')
+  const watchedEmail = watch('email')
+  const watchedPassword = watch('password')
+
+  const onSubmit = async (data) => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, data.email, data.password)
+      await updateProfile(result.user, { displayName: data.name })
+
       const snapshot = await get(ref(db, `users/${result.user.uid}`))
       if (!snapshot.exists()) {
         await set(ref(db, `users/${result.user.uid}`), {
-          email,
-          name,
+          email: data.email,
+          name: data.name,
           role: 'customer',
         })
       }
@@ -33,14 +47,12 @@ export default function RegisterPage() {
       navigate('/', { replace: true })
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        setError('This email is already registered.')
+        setError('root', { message: 'This email is already registered.' })
       } else if (err.code === 'auth/weak-password') {
-        setError('Password must be at least 6 characters.')
+        setError('root', { message: 'Password must be at least 6 characters.' })
       } else {
-        setError('Something went wrong. Please try again.')
+        setError('root', { message: 'Something went wrong. Please try again.' })
       }
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -58,51 +70,62 @@ export default function RegisterPage() {
           <p className="text-gray-500 text-sm mt-1">Join CaféConnect today</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input
+              {...register('name')}
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input-field"
+              className={inputClass(errors.name, watchedName && !errors.name)}
               placeholder="John Doe"
-              required
             />
+            {errors.name ? (
+              <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.name.message}</p>
+            ) : watchedName?.length >= 2 ? (
+              <p className="text-green-500 text-xs mt-1 flex items-center gap-1"><span>✓</span> Looks good!</p>
+            ) : null}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
+              {...register('email')}
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
+              className={inputClass(errors.email, watchedEmail && !errors.email)}
               placeholder="you@example.com"
-              required
             />
+            {errors.email ? (
+              <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.email.message}</p>
+            ) : watchedEmail && !errors.email ? (
+              <p className="text-green-500 text-xs mt-1 flex items-center gap-1"><span>✓</span> Valid email</p>
+            ) : null}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
+              {...register('password')}
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
+              className={inputClass(errors.password, watchedPassword && !errors.password)}
               placeholder="Min. 6 characters"
-              required
             />
+            {errors.password ? (
+              <p className="error-msg flex items-center gap-1 mt-1"><span>⚠️</span> {errors.password.message}</p>
+            ) : watchedPassword && !errors.password ? (
+              <p className="text-green-500 text-xs mt-1 flex items-center gap-1"><span>✓</span> Strong password!</p>
+            ) : null}
           </div>
 
-          {error && <p className="error-msg text-center">{error}</p>}
+          {errors.root && (
+            <p className="error-msg text-center">{errors.root.message}</p>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className="w-full btn-primary disabled:opacity-60"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {isSubmitting ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 

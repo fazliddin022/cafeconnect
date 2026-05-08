@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // Phone validation — O'zbekiston va xalqaro format
-const phoneRegex = /^(\+998|998)?[\s\-]?([0-9]{2})[\s\-]?([0-9]{3})[\s\-]?([0-9]{2})[\s\-]?([0-9]{2})$/
+const phoneRegex = /^(\+998|998)?[\s-]?([0-9]{2})[\s-]?([0-9]{3})[\s-]?([0-9]{2})[\s-]?([0-9]{2})$/
 
 // Reservation form schema
 export const reservationSchema = z.object({
@@ -51,4 +51,32 @@ export const contactSchema = z.object({
     .string()
     .min(10, 'Message must be at least 10 characters')
     .max(1000, 'Message must be under 1000 characters'),
+})
+
+// Login schema
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters'),
+})
+
+// Register schema
+export const registerSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(60, 'Name is too long'),
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Must contain at least one number'),
 })

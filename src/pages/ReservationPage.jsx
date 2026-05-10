@@ -17,7 +17,7 @@ export default function ReservationPage() {
 
         {/* Sidebar */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
             <h3
               className="font-semibold text-lg mb-4"
               style={{ fontFamily: 'Playfair Display, serif' }}

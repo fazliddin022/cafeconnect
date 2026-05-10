@@ -6,11 +6,11 @@ export default function MenuCard({ item }) {
   return (
     <article className="card group">
       {/* Image */}
-      <div className="relative h-48 bg-[#fdf0d5] overflow-hidden">
+      <div className="relative bg-[#fdf0d5] overflow-hidden aspect-[4/3]">
         <img
           src={image}
           alt={name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           onError={(e) => {
             e.target.src = `https://placehold.co/400x300/fdf0d5/c97830?text=${encodeURIComponent(name)}`

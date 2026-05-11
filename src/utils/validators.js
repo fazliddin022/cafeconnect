@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // Phone validation — O'zbekiston va xalqaro format
-const phoneRegex = /^(\+998|998)?[\s-]?([0-9]{2})[\s-]?([0-9]{3})[\s-]?([0-9]{2})[\s-]?([0-9]{2})$/
+const phoneRegex = /^\+?[0-9][\s-]?(\(?\d{1,4}\)?[\s-]?)?([\d][\s-]?){6,14}\d$/
 
 // Reservation form schema
 export const reservationSchema = z.object({

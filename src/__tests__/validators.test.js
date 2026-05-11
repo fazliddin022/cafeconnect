@@ -4,7 +4,7 @@ describe('reservationSchema', () => {
   const validData = {
     name: 'Jane Doe',
     email: 'jane@example.com',
-    phone: '+1 555 123 4567',
+    phone: '+998 90 123 45 67',
     date: '2026-04-01',
     time: '19:00',
     guests: 2,
@@ -34,6 +34,51 @@ describe('reservationSchema', () => {
     const result = reservationSchema.safeParse({ ...validData, guests: 0 })
     expect(result.success).toBe(false)
   })
+
+  it('fails with invalid phone', () => {
+    const result = reservationSchema.safeParse({ ...validData, phone: '123' })
+    expect(result.success).toBe(false)
+  })
+
+  it('passes with valid uzbek phone without spaces', () => {
+    const result = reservationSchema.safeParse({ ...validData, phone: '+998901234567' })
+    expect(result.success).toBe(true)
+  })
+
+  it('passes with valid uzbek phone without +', () => {
+    const result = reservationSchema.safeParse({ ...validData, phone: '998901234567' })
+    expect(result.success).toBe(true)
+  })
+
+  it('passes with valid US phone', () => {
+    const result = reservationSchema.safeParse({ ...validData, phone: '+15551234567' })
+    expect(result.success).toBe(true)
+  })
+
+  it('passes with valid UK phone', () => {
+    const result = reservationSchema.safeParse({ ...validData, phone: '+442079460958' })
+    expect(result.success).toBe(true)
+  })
+
+  it('fails with notes exceeding max length', () => {
+    const result = reservationSchema.safeParse({ ...validData, notes: 'a'.repeat(301) })
+    expect(result.success).toBe(false)
+  })
+
+  it('passes with optional notes within limit', () => {
+    const result = reservationSchema.safeParse({ ...validData, notes: 'Window seat please.' })
+    expect(result.success).toBe(true)
+  })
+
+  it('fails with missing date', () => {
+    const result = reservationSchema.safeParse({ ...validData, date: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with missing time', () => {
+    const result = reservationSchema.safeParse({ ...validData, time: '' })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('contactSchema', () => {
@@ -54,8 +99,28 @@ describe('contactSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  it('fails with message too long', () => {
+    const result = contactSchema.safeParse({ ...validData, message: 'a'.repeat(1001) })
+    expect(result.success).toBe(false)
+  })
+
   it('fails with missing subject', () => {
     const result = contactSchema.safeParse({ ...validData, subject: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with subject too short', () => {
+    const result = contactSchema.safeParse({ ...validData, subject: 'Hi' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with invalid email', () => {
+    const result = contactSchema.safeParse({ ...validData, email: 'not-email' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with name too short', () => {
+    const result = contactSchema.safeParse({ ...validData, name: 'J' })
     expect(result.success).toBe(false)
   })
 })

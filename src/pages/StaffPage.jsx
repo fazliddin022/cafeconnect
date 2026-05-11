@@ -11,10 +11,10 @@ import {
 import RescheduleModal from '../components/reservation/RescheduleModal'
 
 const STATUS_STYLES = {
-  pending:     'bg-yellow-100 text-yellow-800',
-  confirmed:   'bg-green-100 text-green-800',
-  cancelled:   'bg-red-100 text-red-800',
-  completed:   'bg-gray-100 text-gray-600',
+  pending: 'bg-yellow-100 text-yellow-800',
+  confirmed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+  completed: 'bg-gray-100 text-gray-600',
   rescheduled: 'bg-blue-100 text-blue-800',
 }
 
@@ -62,9 +62,7 @@ export default function StaffPage() {
     setUpdatingId(id)
     try {
       await updateReservationStatus(id, newStatus)
-      setReservations((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: newStatus } : r)
-      )
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)))
     } catch (err) {
       alert('Failed to update status.')
     } finally {
@@ -93,9 +91,7 @@ export default function StaffPage() {
     setConfirmCancel(null)
     try {
       await updateReservationStatus(id, 'cancelled')
-      setReservations((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: 'cancelled' } : r)
-      )
+      setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)))
     } catch (err) {
       alert('Failed to cancel.')
     }
@@ -107,7 +103,10 @@ export default function StaffPage() {
   }
 
   const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   })
 
   return (
@@ -130,8 +129,10 @@ export default function StaffPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900"
-            style={{ fontFamily: 'Playfair Display, serif' }}>
+          <h2
+            className="text-2xl font-bold text-gray-900"
+            style={{ fontFamily: 'Playfair Display, serif' }}
+          >
             Today's Reservations ({reservations.length})
           </h2>
           <p className="text-gray-500 text-sm mt-1">{today}</p>
@@ -167,7 +168,9 @@ export default function StaffPage() {
                       {updatingId === r.id ? (
                         <span className="text-gray-400 text-sm">Updating...</span>
                       ) : r.status === 'cancelled' || r.status === 'completed' ? (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status]}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[r.status]}`}
+                        >
                           {r.status}
                         </span>
                       ) : (
@@ -177,7 +180,9 @@ export default function StaffPage() {
                           className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c97830] ${STATUS_STYLES[r.status] || 'bg-gray-100 text-gray-600'}`}
                         >
                           {STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s} className="bg-white text-gray-900">
+                              {s}
+                            </option>
                           ))}
                         </select>
                       )}
@@ -224,15 +229,18 @@ export default function StaffPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-xl">
             <p className="text-4xl mb-4">🗑️</p>
-            <h2 className="text-xl font-bold text-gray-900 mb-2"
-              style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h2
+              className="text-xl font-bold text-gray-900 mb-2"
+              style={{ fontFamily: 'Playfair Display, serif' }}
+            >
               Cancel Reservation?
             </h2>
             <p className="text-gray-500 text-sm mb-6">
               Are you sure you want to cancel reservation for{' '}
               <span className="font-medium text-gray-700">
                 {confirmCancel.date} at {confirmCancel.time}
-              </span>? This action cannot be undone.
+              </span>
+              ? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmCancel(null)} className="flex-1 btn-outline">

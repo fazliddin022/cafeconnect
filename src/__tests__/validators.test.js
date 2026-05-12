@@ -1,4 +1,4 @@
-import { reservationSchema, contactSchema } from '../utils/validators'
+import { reservationSchema, contactSchema, loginSchema, registerSchema } from '../utils/validators'
 
 describe('reservationSchema', () => {
   const validData = {
@@ -121,6 +121,76 @@ describe('contactSchema', () => {
 
   it('fails with name too short', () => {
     const result = contactSchema.safeParse({ ...validData, name: 'J' })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('loginSchema', () => {
+  const validData = {
+    email: 'user@example.com',
+    password: 'Password1',
+  }
+
+  it('passes with valid data', () => {
+    const result = loginSchema.safeParse(validData)
+    expect(result.success).toBe(true)
+  })
+
+  it('fails with invalid email', () => {
+    const result = loginSchema.safeParse({ ...validData, email: 'not-email' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with empty email', () => {
+    const result = loginSchema.safeParse({ ...validData, email: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with password too short', () => {
+    const result = loginSchema.safeParse({ ...validData, password: '123' })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('registerSchema', () => {
+  const validData = {
+    name: 'John Doe',
+    email: 'john@example.com',
+    password: 'Password1',
+  }
+
+  it('passes with valid data', () => {
+    const result = registerSchema.safeParse(validData)
+    expect(result.success).toBe(true)
+  })
+
+  it('fails with name too short', () => {
+    const result = registerSchema.safeParse({ ...validData, name: 'J' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with invalid email', () => {
+    const result = registerSchema.safeParse({ ...validData, email: 'not-email' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with password without uppercase', () => {
+    const result = registerSchema.safeParse({ ...validData, password: 'password1' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with password without number', () => {
+    const result = registerSchema.safeParse({ ...validData, password: 'Password' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with password too short', () => {
+    const result = registerSchema.safeParse({ ...validData, password: 'Pass1' })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails with name too long', () => {
+    const result = registerSchema.safeParse({ ...validData, name: 'a'.repeat(61) })
     expect(result.success).toBe(false)
   })
 })

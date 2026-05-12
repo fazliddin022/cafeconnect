@@ -92,27 +92,27 @@ export default function ReservationForm() {
   }
 
   const onSubmit = async (data) => {
-    setIsSubmitting(true)
-    setError(null)
-    try {
-      await submitReservation(data)
-      await saveUserPhone(user.uid, data.phone)
-      confirmReservation(data)
-      reset({
-        guests: 2,
-        name: user?.displayName || '',
-        email: user?.email || '',
-        phone: data.phone,
-      })
-      setBookedTimes([])
-      setSelectedDate('')
-    } catch (err) {
-      console.error(err)
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
+  setIsSubmitting(true)
+  setError(null)
+  try {
+    const id = await submitReservation(data)
+    await saveUserPhone(user.uid, data.phone)
+    confirmReservation({ ...data, id })
+    reset({
+      guests: 2,
+      name: user?.displayName || '',
+      email: user?.email || '',
+      phone: data.phone,
+    })
+    setBookedTimes([])
+    setSelectedDate('')
+  } catch (err) {
+    console.error(err)
+    setError('Something went wrong. Please try again.')
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   const today = new Date().toISOString().split('T')[0]
 

@@ -42,7 +42,7 @@ function PaymentModal({ reservation, onSuccess, onClose }) {
     setError(null)
     setProcessing(true)
 
-    // Mock payment — 2 soniya kutamiz
+    // Mock payment — wait 2 second
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     try {

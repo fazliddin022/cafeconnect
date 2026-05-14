@@ -51,7 +51,7 @@ export default function ReservationForm() {
   const watchedPhone = watch('phone')
   const watchedGuests = watch('guests')
 
-  // Phone ni Firebase dan yuklash
+  // Upload Phone from Firebase
   useEffect(() => {
     if (!user) return
     const loadPhone = async () => {

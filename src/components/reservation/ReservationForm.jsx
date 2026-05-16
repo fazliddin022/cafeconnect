@@ -172,6 +172,7 @@ export default function ReservationForm() {
           <input
             {...register('date')}
             type="date"
+            lang="en"
             min={today}
             className={inputClass(errors.date, watchedDate && !errors.date)}
           />

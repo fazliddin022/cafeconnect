@@ -197,7 +197,7 @@ function EventCard({ event, past, isRegistered, onRegister }) {
             <span>🕐 {event.time}</span>
           </div>
 
-          {/* Register button — faqat upcoming events uchun */}
+          {/* Register button — only for upcoming events */}
           {!past && onRegister && (
             <button
               onClick={onRegister}

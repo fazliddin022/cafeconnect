@@ -1,7 +1,7 @@
 import { ref, push, set, get } from 'firebase/database'
 import { db } from './firebase'
 
-// Review qo'shish
+// Add a review
 export async function submitReview(data) {
   const newRef = push(ref(db, 'reviews'))
   await set(newRef, {
@@ -11,7 +11,7 @@ export async function submitReview(data) {
   return newRef.key
 }
 
-// Barcha reviewlarni olish
+// Get all reviews
 export async function fetchReviews() {
   const snapshot = await get(ref(db, 'reviews'))
   if (!snapshot.exists()) return []
@@ -19,7 +19,7 @@ export async function fetchReviews() {
   return Object.entries(data).map(([id, item]) => ({ id, ...item }))
 }
 
-// Foydalanuvchining biror reservation uchun review qoldirganini tekshirish
+// Check if a user has left a review for a reservation
 export async function hasReviewed(userId, reservationId) {
   const all = await fetchReviews()
   return all.some((r) => r.userId === userId && r.reservationId === reservationId)

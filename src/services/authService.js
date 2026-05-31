@@ -11,7 +11,7 @@ export async function logoutAdmin() {
   await signOut(auth)
 }
 
-// User rolini Firebase dan olish
+// Get User Role from Firebase
 export async function getUserRole(uid) {
   try {
     const snapshot = await get(ref(db, `users/${uid}`))
@@ -25,7 +25,7 @@ export async function getUserRole(uid) {
   }
 }
 
-// User phone olish
+// Get User phone
 export async function getUserPhone(uid) {
   try {
     const snapshot = await get(ref(db, `users/${uid}/phone`))
@@ -37,7 +37,7 @@ export async function getUserPhone(uid) {
   }
 }
 
-// User phone saqlash
+// Save User phone
 export async function saveUserPhone(uid, phone) {
   try {
     await set(ref(db, `users/${uid}/phone`), phone)

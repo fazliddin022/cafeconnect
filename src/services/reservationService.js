@@ -18,13 +18,13 @@ export async function fetchReservations() {
   return Object.entries(data).map(([id, item]) => ({ id, ...item }))
 }
 
-// Faqat shu userning reservationlari — email bo'yicha filter
+// Only reservations from this user — filter by email
 export async function fetchMyReservations(email) {
   const all = await fetchReservations()
   return all.filter((r) => r.email === email)
 }
 
-// Reservationni bekor qilish
+// Cancel reservation
 export async function cancelReservation(id) {
   await update(ref(db, `reservations/${id}`), {
     status: 'cancelled',
@@ -32,7 +32,7 @@ export async function cancelReservation(id) {
   })
 }
 
-// Reservationni qayta belgilash
+// Reschedule reservation
 export async function rescheduleReservation(id, newDate, newTime) {
   await update(ref(db, `reservations/${id}`), {
     date: newDate,
@@ -42,7 +42,7 @@ export async function rescheduleReservation(id, newDate, newTime) {
   })
 }
 
-// Admin uchun — reservation statusini o'zgartirish
+// For admin — change reservation status
 export async function updateReservationStatus(id, status) {
   await update(ref(db, `reservations/${id}`), {
     status,
@@ -50,7 +50,7 @@ export async function updateReservationStatus(id, status) {
   })
 }
 
-// O'tib ketgan reservationlarni completed ga o'tkazish
+// Move past reservations to completed
 export async function autoCompleteReservations() {
   const all = await fetchReservations()
   const now = new Date()

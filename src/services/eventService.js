@@ -22,30 +22,30 @@ export async function deleteEvent(id) {
   await remove(ref(db, `events/${id}`))
 }
 
-// Event ga register bo'lish
+// Register for the event
 export async function registerForEvent(eventId, userId) {
   await set(ref(db, `eventRegistrations/${eventId}/${userId}`), true)
 }
 
-// Event dan register ni bekor qilish
+// Unregister from Event
 export async function unregisterFromEvent(eventId, userId) {
   await remove(ref(db, `eventRegistrations/${eventId}/${userId}`))
 }
 
-// User shu event ga registered bo'lganini tekshirish
+// Check if the user is registered for this event
 export async function isRegistered(eventId, userId) {
   const snapshot = await get(ref(db, `eventRegistrations/${eventId}/${userId}`))
   return snapshot.exists()
 }
 
-// Event dagi barcha registrationlarni olish
+// Get all registrations in an event
 export async function fetchEventRegistrations(eventId) {
   const snapshot = await get(ref(db, `eventRegistrations/${eventId}`))
   if (!snapshot.exists()) return []
   return Object.keys(snapshot.val())
 }
 
-// Barcha eventlar uchun registration countlarni olish
+// Get registration counts for all events
 export async function fetchAllRegistrationCounts() {
   const snapshot = await get(ref(db, 'eventRegistrations'))
   if (!snapshot.exists()) return {}

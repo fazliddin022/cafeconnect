@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-// Phone validation — O'zbekiston va xalqaro format
+// Phone validation — Uzbekistan and international format
 const phoneRegex = /^\+?[0-9][\s-]?(\(?\d{1,4}\)?[\s-]?)?([\d][\s-]?){6,14}\d$/
 
 // Reservation form schema
